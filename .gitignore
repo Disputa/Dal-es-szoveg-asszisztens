@@ -1,0 +1,7 @@
+﻿node_modules/
+src-tauri/target/
+dist/
+.vite/
+.emleksugo_backup_*/
+.DS_Store
+*.log

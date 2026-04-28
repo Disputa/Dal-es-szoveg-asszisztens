@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "EmlékSúgó 2.0_FIX",
+  "version": "2.0.0",
+  "identifier": "hu.deme.emleksugo.v2fix",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "EmlékSúgó 2.0_FIX",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "publisher": "Deme Gábor",
+    "shortDescription": "EmlékSúgó 2.0_FIX",
+    "longDescription": "EmlékSúgó koncert-súgó rendszer - V2 working fixed build.",
+    "fileAssociations": [
+      {
+        "ext": ["esp"],
+        "name": "EmlékSúgóProjekt",
+        "description": "EmlékSúgó projektfájl",
+        "role": "Editor"
+      }
+    ]
+  }
+}

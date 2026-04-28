@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "emleksugo-project-save",
+  "description": "Engedélyezi az EmlékSúgó .esp projektfájl mentését a felhasználó által kiválasztott helyre.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "fs:allow-write-text-file",
+    "fs:allow-write-file"
+  ]
+}

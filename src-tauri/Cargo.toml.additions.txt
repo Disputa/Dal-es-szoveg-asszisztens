@@ -1,0 +1,3 @@
+# Cargo.toml – ADD/ENSURE these dependencies under [dependencies]
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"

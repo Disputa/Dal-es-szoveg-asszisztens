@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EmlékSúgó</title>
+    <script type="module" crossorigin src="/assets/main-D235LGMW.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/event-BzTtig8A.js">
+    <link rel="stylesheet" crossorigin href="/assets/main-BUQNVDYX.css">
+  </head>
+  <body>
+    <div id="splashScreen" class="splash-screen" style="background-image: linear-gradient(rgba(4,6,20,0.25), rgba(4,6,20,0.6)), url('/nyitokep.png'); background-size: cover; background-position: center center; background-repeat: no-repeat;">
+      <div class="splash-card" id="splashCard">
+        <h1>EmlékSúgó</h1>
+        <p>koncert-súgó rendszer</p>
+        <div class="credit-box credit-box-center">
+          created by: Deme Gábor © 2026<br />
+          only use for Szolnoki Szigligeti Theater
+        </div>
+        <button id="enterAppBtn" type="button">Indítás most</button>
+      </div>
+    </div>
+
+    <div id="appRoot" class="app hidden">
+      <aside class="sidebar">
+        <h1>EmlékSúgó</h1>
+        <div class="credit-box">
+          created by: Deme Gábor © 2026<br />
+          only use for Szolnoki Szigligeti Theater
+        </div>
+
+        <section class="panel">
+          <div class="small-label">Adatbetöltés és lejátszás</div>
+          <button id="loadShowlistBtn" type="button">Műsorrend betöltése (.txt/.docx)</button>
+          <button id="loadLyricsBtn" type="button">Szövegkönyv betöltése (.txt/.docx)</button>
+          <button id="saveProjectBtn" type="button">Projekt mentése</button>
+          <button id="openProjectBtn" type="button">Projekt megnyitása</button>
+
+          <label for="playbackModeSelect">Display2 lejátszási mód</label>
+          <select id="playbackModeSelect">
+            <option value="blocks">Blokkonként</option>
+            <option value="scroll-up">Lentről felfelé</option>
+            <option value="scroll-down">Fentről lefelé</option>
+          </select>
+
+          <label for="speedRange">Lejátszási sebesség</label>
+          <input id="speedRange" type="range" min="0" max="200" step="5" value="50" />
+          <div id="speedValue" class="small-note">50%</div>
+
+          <div class="small-label display-settings-title">Display2 megjelenés</div>
+
+          <label for="displayFontSizeRange">Display2 szövegméret</label>
+          <input id="displayFontSizeRange" type="range" min="28" max="80" step="1" value="42" />
+          <div id="displayFontSizeValue" class="small-note">42 px</div>
+
+          <label for="roleFontSizeRange">Megszólaló név mérete</label>
+          <input id="roleFontSizeRange" type="range" min="26" max="72" step="1" value="44" />
+          <div id="roleFontSizeValue" class="small-note">44 px</div>
+
+          <label for="roleTopRange">Megszólaló név függőleges pozíciója</label>
+          <input id="roleTopRange" type="range" min="0" max="160" step="1" value="6" />
+          <div id="roleTopValue" class="small-note">6 px</div>
+
+          <label class="check-row"><input id="showListMainCheckbox" type="checkbox" checked /> <span>Műsorlista a főfelületen</span></label>
+          <label class="check-row"><input id="showListDisplayCheckbox" type="checkbox" /> <span>Műsorlista a Display2-n</span></label>
+
+          <input id="showlistInput" type="file" accept=".txt,.docx" hidden />
+          <input id="lyricsInput" type="file" accept=".txt,.docx" hidden />
+          <input id="projectInput" type="file" accept=".esp,.json,.emleksugo.project.json,application/json" hidden />
+
+          <div id="importStatus" class="import-status">
+            Műsorrend: nincs betöltve<br />
+            Szövegkönyv: nincs betöltve<br />
+            Projekt: nincs megnyitva<br />
+            Mód: blokkonként
+          </div>
+        </section>
+
+
+        <section class="panel preview-panel" id="previewPanel">
+          <div class="preview-header">
+            <div id="previewTitle" class="preview-title">-</div>
+            <div id="previewRole" class="preview-role"></div>
+          </div>
+          <div id="previewText" class="preview-text">Nincs betöltött blokk.</div>
+        </section>
+
+        <section class="panel">
+          <label for="monitorSelect">Kijelző:</label>
+          <select id="monitorSelect"></select>
+          <button id="openDisplayBtn">Kijelző nyitása</button>
+          <button id="sendBtn">Aktuális blokk küldése</button>
+        </section>
+
+        <section class="panel" id="showListPanel">
+          <div class="small-label">Műsorrend</div>
+          <div id="showList" class="show-list"></div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <header class="topbar panel">
+          <div><strong>Szám:</strong> <span id="currentTitle">-</span></div>
+          <div><strong>Blokk:</strong> <span id="currentBlockInfo">-</span></div>
+          <div><strong>Állapot:</strong> <span id="statusText">STOP</span></div>
+          <div><strong>Sebesség:</strong> <span id="speedText">100%</span></div>
+        </header>
+
+        <section class="controls panel" id="transportPanel">
+          <button id="jumpStartBtn">⏮ Felirat eleje</button>
+          <button id="prevBtn">◀ Előző blokk</button>
+          <button id="playBtn">▶ / ⏸ Play-Pause</button>
+          <button id="nextBtn">Következő blokk ▶</button>
+          <button id="jumpEndBtn">Felirat vége ⏭</button>
+          <button id="nextItemBtn">Köv. dal eleje ⏭♫</button>
+          <button id="blackBtn">⬛ Black</button>
+        </section>
+
+        <section class="panel current-panel">
+          <div id="currentRole" class="current-role"></div>
+          <div id="blockList" class="block-list"></div>
+        </section>
+
+        <section class="panel help">
+          <div><strong>Billentyűk:</strong></div>
+          <div>Home = felirat eleje</div>
+          <div>← előző blokk</div>
+          <div>→ következő blokk</div>
+          <div>End = felirat vége</div>
+          <div>PageDown = következő dal eleje</div>
+          <div>Enter vagy Space = play/pause</div>
+          <div>↑ gyorsít</div>
+          <div>↓ lassít</div>
+          <div>B = black</div>
+        </section>
+
+        <footer class="app-footer">
+          EmlékSúgó — created by: Deme Gábor © 2026 — only use for Szolnoki Szigligeti Theater
+        </footer>
+      </main>
+    </div>
+
+</body>
+</html>

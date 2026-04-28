@@ -1,0 +1,21 @@
+{
+  "name": "emlek-sugo",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.12.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "vite": "^7.0.0"
+  }
+}
