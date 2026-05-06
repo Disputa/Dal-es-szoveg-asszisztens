@@ -1,15 +1,30 @@
 
+import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
+import "./display.css";
+import splashImage from "./nyitokep.png";
+
+const isPreview = new URLSearchParams(window.location.search).get("preview") === "1";
 
 const els = {
+  app: document.getElementById("app"),
+  displayMinimizeBtn: document.getElementById("displayMinimizeBtn"),
+  displayToggleWindowBtn: document.getElementById("displayToggleWindowBtn"),
+  displayCloseBtn: document.getElementById("displayCloseBtn"),
   songTitle: document.getElementById("songTitle"),
   role: document.getElementById("role"),
   overlay: document.getElementById("overlay"),
   showList: document.getElementById("showList"),
+  blockRail: document.getElementById("blockRail"),
   contentWrap: document.getElementById("contentWrap"),
   content: document.getElementById("content"),
   transportHud: document.getElementById("transportHud"),
 };
+
+if (els.app) {
+  els.app.style.setProperty("--display-bg-image", `url("${splashImage}")`);
+  els.app.classList.toggle("preview-mode", isPreview);
+}
 
 const runtime = {
   frameId: null,
@@ -48,7 +63,7 @@ function setOverlay(text) {
 
 function renderShowList(titles = [], currentIndex = 0, visible = false) {
   els.showList.style.display = visible ? "block" : "none";
-  els.contentWrap.style.left = visible ? "408px" : "24px";
+  els.contentWrap.classList.toggle("has-show-list", visible);
 
   if (!visible) return;
 
@@ -69,6 +84,31 @@ function renderShowList(titles = [], currentIndex = 0, visible = false) {
   });
 }
 
+function renderBlockRail(blocks = [], activeIndex = 0) {
+  if (!els.blockRail) return;
+  const hasBlocks = Array.isArray(blocks) && blocks.length > 1;
+  els.blockRail.style.display = hasBlocks ? "block" : "none";
+  els.contentWrap.classList.toggle("has-block-rail", hasBlocks);
+  if (!hasBlocks) {
+    els.blockRail.innerHTML = "";
+    return;
+  }
+
+  els.blockRail.innerHTML = `
+    <div class="block-rail-title">BLOKKOK</div>
+    <div class="block-rail-list">
+      ${blocks.map((block, index) => `
+        <button class="rail-block ${index === activeIndex ? "active" : ""}" data-index="${index}">
+          <span class="rail-block-index">${index + 1}</span>
+          <span class="rail-block-body">
+            <strong>${escapeHtml(block.role || "")}</strong>
+            <span>${escapeHtml(block.text || "")}</span>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
 
 function applyTextStyle() {
   const fontSize = Math.max(16, Number(runtime.textStyle?.fontSize) || 42);
@@ -182,6 +222,15 @@ function renderTransportHud() {
   });
 }
 
+async function invokeWindowCommand(command) {
+  if (isPreview) return;
+  try {
+    await invoke(command);
+  } catch (err) {
+    console.warn(`Ablakparancs sikertelen (${command}):`, err);
+  }
+}
+
 function renderState(payload) {
   const {
     songTitle,
@@ -217,6 +266,7 @@ function renderState(payload) {
   els.songTitle.textContent = songTitle || "";
   els.role.textContent = runtime.mode === "blocks" ? (role || "") : (runtime.activeRole || "");
   renderShowList(showListTitles || [], currentItemIndex || 0, !!showListVisible);
+  renderBlockRail(runtime.blocks, runtime.blockIndex - 1);
   renderTransportHud();
   applyTextStyle();
 
@@ -273,10 +323,33 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-listen("display:block", (event) => {
-  renderState(event.payload || {});
+if (!isPreview) {
+  listen("display:block", (event) => {
+    renderState(event.payload || {});
+  }).catch((err) => console.warn("Display event listener hiba:", err));
+
+  listen("display:overlay", (event) => {
+    setOverlay(event.payload?.text || "");
+  }).catch((err) => console.warn("Display overlay listener hiba:", err));
+}
+
+window.addEventListener("message", (event) => {
+  if (event.data?.source !== "emleksugo-main") return;
+  if (event.data.type === "display:block") {
+    renderState(event.data.payload || {});
+  }
+  if (event.data.type === "display:overlay") {
+    setOverlay(event.data.payload?.text || "");
+  }
 });
 
-listen("display:overlay", (event) => {
-  setOverlay(event.payload?.text || "");
-});
+els.displayMinimizeBtn?.addEventListener("click", () => invokeWindowCommand("es_window_minimize"));
+els.displayToggleWindowBtn?.addEventListener("click", () => invokeWindowCommand("es_window_toggle"));
+els.displayCloseBtn?.addEventListener("click", () => invokeWindowCommand("es_window_close"));
+
+if (isPreview) {
+  window.parent?.postMessage({
+    source: "emleksugo-display-preview",
+    type: "display:ready",
+  }, "*");
+}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EmlékSúgó Súgó</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0d13;
+        --panel: #151923;
+        --text: #f5f7fb;
+        --muted: #aab3c2;
+        --accent: #ffd95f;
+        --border: rgba(255,255,255,0.12);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.5;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        padding: 16px 22px;
+        background: rgba(11,13,19,0.92);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+      }
+      h1, h2 { margin: 0; }
+      h1 { font-size: 24px; }
+      h2 { font-size: 18px; color: var(--accent); margin-bottom: 10px; }
+      main {
+        display: grid;
+        grid-template-columns: minmax(360px, 0.9fr) minmax(460px, 1.1fr);
+        gap: 18px;
+        padding: 18px;
+      }
+      section, .pdf-panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .stack { display: grid; gap: 14px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code {
+        background: rgba(255,255,255,0.08);
+        border-radius: 5px;
+        padding: 2px 5px;
+      }
+      a, .accent { color: var(--accent); }
+      .muted { color: var(--muted); }
+      .pdf-panel {
+        min-height: calc(100vh - 96px);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+      iframe {
+        width: 100%;
+        min-height: 720px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #111;
+      }
+      @media (max-width: 980px) {
+        main { grid-template-columns: 1fr; }
+        iframe { min-height: 560px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>EmlékSúgó 2.5.0 Súgó</h1>
+        <div class="muted">Koncert-súgó rendszer, created by: Deme Gábor © 2026</div>
+      </div>
+      <a href="/help/EmlekSugo_2_5_0_Gyors_Sugo.pdf" target="_blank" rel="noreferrer">PDF megnyitása</a>
+    </header>
+    <main>
+      <div class="stack">
+        <section>
+          <h2>Gyors indítás</h2>
+          <ul>
+            <li>Műsorrend betöltése: `.txt` vagy `.docx` fájlból.</li>
+            <li>Szövegkönyv betöltése: `.txt` vagy `.docx` fájlból.</li>
+            <li>Kijelző kiválasztása után a <span class="accent">Kijelző nyitása</span> gomb küldi ki a Display2 ablakot.</li>
+            <li>A projektet `.esp` fájlba érdemes menteni, így később visszatölthető.</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Vezérlés</h2>
+          <ul>
+            <li><code>Home</code>: felirat eleje</li>
+            <li><code>End</code>: felirat vége</li>
+            <li><code>←</code> / <code>→</code>: előző/következő blokk</li>
+            <li><code>PageDown</code>: következő dal eleje</li>
+            <li><code>Enter</code> vagy <code>Space</code>: lejátszás/szünet</li>
+            <li><code>↑</code> / <code>↓</code>: sebesség állítása</li>
+            <li><code>B</code>: black kapcsolás</li>
+          </ul>
+        </section>
+        <section>
+          <h2>2.5.0 újdonságok</h2>
+          <ul>
+            <li>Élő Display2 előnézet a főablakban.</li>
+            <li>Háttérképes Display2 megjelenés és blokk-sáv.</li>
+            <li>A megszólaló neve középre került.</li>
+            <li>Mindkét kijelzőn saját ablakgombok: tálcára rejtés, ablak/teljes képernyő, bezárás.</li>
+          </ul>
+        </section>
+      </div>
+      <div class="pdf-panel">
+        <div>
+          <h2>Beépített gyors súgó PDF</h2>
+          <div class="muted">A korábbi gyors súgó beépített referenciaként elérhető.</div>
+        </div>
+        <iframe src="/help/EmlekSugo_2_5_0_Gyors_Sugo.pdf" title="EmlékSúgó gyors súgó PDF"></iframe>
+      </div>
+    </main>
+  </body>
+</html>

@@ -27,6 +27,36 @@ body {
   overflow: hidden;
 }
 
+.window-controls {
+  position: fixed;
+  top: 8px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 10000;
+}
+
+.window-control-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(18,18,18,0.82);
+  color: rgba(255,255,255,0.86);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.window-control-btn:hover {
+  background: rgba(62,77,98,0.95);
+}
+
+.window-control-btn.close:hover {
+  background: rgba(140, 31, 31, 0.95);
+}
+
 .hidden {
   display: none !important;
 }
@@ -261,6 +291,28 @@ label {
   border: 1px solid var(--accent);
   border-radius: 16px;
   padding: 18px;
+}
+
+.live-preview-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: #000;
+}
+
+.live-preview-frame iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  transform: scale(var(--preview-scale, 0.218));
+  transform-origin: left top;
+  pointer-events: none;
 }
 
 .block-list {

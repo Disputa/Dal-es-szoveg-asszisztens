@@ -1,6 +1,8 @@
 
 import JSZip from "jszip";
+import "./style.css";
 import splashImage from "./nyitokep.png";
+import { invoke } from "@tauri-apps/api/core";
 import {
   availableMonitors,
   currentMonitor,
@@ -55,11 +57,15 @@ const els = {
   splashScreen: document.getElementById("splashScreen"),
   splashCard: document.getElementById("splashCard"),
   enterAppBtn: document.getElementById("enterAppBtn"),
+  mainMinimizeBtn: document.getElementById("mainMinimizeBtn"),
+  mainToggleWindowBtn: document.getElementById("mainToggleWindowBtn"),
+  mainCloseBtn: document.getElementById("mainCloseBtn"),
   appRoot: document.getElementById("appRoot"),
   loadShowlistBtn: document.getElementById("loadShowlistBtn"),
   loadLyricsBtn: document.getElementById("loadLyricsBtn"),
   saveProjectBtn: document.getElementById("saveProjectBtn"),
   openProjectBtn: document.getElementById("openProjectBtn"),
+  openHelpBtn: document.getElementById("openHelpBtn"),
   showlistInput: document.getElementById("showlistInput"),
   lyricsInput: document.getElementById("lyricsInput"),
   projectInput: document.getElementById("projectInput"),
@@ -89,14 +95,17 @@ const els = {
   prevBtn: document.getElementById("prevBtn"),
   playBtn: document.getElementById("playBtn"),
   nextBtn: document.getElementById("nextBtn"),
+  nextItemBtn: document.getElementById("nextItemBtn"),
   blackBtn: document.getElementById("blackBtn"),
   previewPanel: document.getElementById("previewPanel"),
   previewTitle: document.getElementById("previewTitle"),
   previewRole: document.getElementById("previewRole"),
-  previewText: document.getElementById("previewText"),
+  displayPreviewFrame: document.getElementById("displayPreviewFrame"),
   currentRole: document.getElementById("currentRole"),
   blockList: document.getElementById("blockList"),
 };
+
+let lastDisplayPayload = null;
 
 function getTextStyle() {
   return {
@@ -118,12 +127,7 @@ function setTextStyleValue(key, rawValue) {
 }
 
 function applyTextStyleToPreviewElements() {
-  const { fontSize, offsetX, offsetY } = getTextStyle();
-  if (els.previewText) {
-    els.previewText.style.setProperty("--preview-font-size", `${fontSize}px`);
-    els.previewText.style.setProperty("--preview-offset-x", `${offsetX}px`);
-    els.previewText.style.setProperty("--preview-offset-y", `${offsetY}px`);
-  }
+  postPreviewState();
 }
 
 async function updateTextStyleAndSync(key, value) {
@@ -181,6 +185,10 @@ function bindUi() {
   els.loadLyricsBtn?.addEventListener("click", () => els.lyricsInput?.click());
   els.saveProjectBtn?.addEventListener("click", () => saveProjectToFile());
   els.openProjectBtn?.addEventListener("click", () => els.projectInput?.click());
+  els.openHelpBtn?.addEventListener("click", () => openHelpWindow());
+  els.mainMinimizeBtn?.addEventListener("click", () => invokeWindowCommand("es_window_minimize"));
+  els.mainToggleWindowBtn?.addEventListener("click", () => invokeWindowCommand("es_window_toggle"));
+  els.mainCloseBtn?.addEventListener("click", () => invokeWindowCommand("es_window_close"));
 
   els.showlistInput?.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
@@ -251,6 +259,13 @@ function bindUi() {
     await syncDisplay();
   });
 
+  bindTextStyleControl(els.fontSizeRange, "fontSize");
+  bindTextStyleControl(els.fontSizeInput, "fontSize");
+  bindTextStyleControl(els.offsetXRange, "offsetX");
+  bindTextStyleControl(els.offsetXInput, "offsetX");
+  bindTextStyleControl(els.offsetYRange, "offsetY");
+  bindTextStyleControl(els.offsetYInput, "offsetY");
+
   els.showListMainCheckbox?.addEventListener("change", () => {
     uiPrefs.showListMain = !!els.showListMainCheckbox.checked;
     updateMainShowListVisibility();
@@ -292,12 +307,29 @@ function bindUi() {
     await jumpToBlockBoundary("end");
   });
 
+  els.nextItemBtn?.addEventListener("click", async () => {
+    await jumpToNextItem();
+  });
+
   els.playBtn?.addEventListener("click", async () => {
     await togglePlayPause();
   });
 
   els.blackBtn?.addEventListener("click", async () => {
     await toggleBlack();
+  });
+
+  els.displayPreviewFrame?.addEventListener("load", () => {
+    resizePreviewFrame();
+    updatePreviewPayload();
+  });
+  window.addEventListener("resize", resizePreviewFrame);
+  window.addEventListener("message", (event) => {
+    if (event.data?.source !== "emleksugo-display-preview") return;
+    if (event.data.type === "display:ready") {
+      resizePreviewFrame();
+      updatePreviewPayload();
+    }
   });
 
   window.addEventListener("keydown", async (e) => {
@@ -318,6 +350,11 @@ function bindUi() {
     if (e.code === "End") {
       e.preventDefault();
       await jumpToBlockBoundary("end");
+      return;
+    }
+    if (e.code === "PageDown") {
+      e.preventDefault();
+      await jumpToNextItem();
       return;
     }
     if (e.code === "ArrowLeft") {
@@ -358,6 +395,56 @@ function bindUi() {
       await toggleBlack();
     }
   });
+}
+
+function bindTextStyleControl(element, key) {
+  element?.addEventListener("input", async (e) => {
+    await updateTextStyleAndSync(key, e.target.value);
+  });
+}
+
+async function invokeWindowCommand(command) {
+  try {
+    await invoke(command);
+  } catch (err) {
+    console.warn(`Ablakparancs sikertelen (${command}):`, err);
+  }
+}
+
+async function openHelpWindow() {
+  try {
+    let helpWindow = await WebviewWindow.getByLabel("emlek-sugo-help");
+    if (!helpWindow) {
+      helpWindow = new WebviewWindow("emlek-sugo-help", {
+        url: "help.html",
+        title: "EmlékSúgó Súgó",
+        decorations: true,
+        focus: true,
+        visible: true,
+        resizable: true,
+        width: 1180,
+        height: 820,
+      });
+      await new Promise((resolve, reject) => {
+        helpWindow.once("tauri://created", () => resolve());
+        helpWindow.once("tauri://error", (error) => reject(error));
+      });
+    }
+    try { await helpWindow.show(); } catch {}
+    try { await helpWindow.setFocus(); } catch {}
+  } catch (err) {
+    console.warn("Súgó ablak nem nyitható, böngészős fallback:", err);
+    window.open("help.html", "_blank", "noopener,noreferrer");
+  }
+}
+
+function resizePreviewFrame() {
+  const frame = els.displayPreviewFrame;
+  const holder = frame?.parentElement;
+  if (!frame || !holder) return;
+  const scale = holder.clientWidth / 1280;
+  holder.style.setProperty("--preview-scale", String(scale));
+  holder.style.height = `${720 * scale}px`;
 }
 
 async function bindDisplaySelectionListener() {
@@ -450,7 +537,7 @@ function renderPreview() {
   const block = getCurrentBlock();
   if (els.previewTitle) els.previewTitle.textContent = item?.title || "Nincs kiválasztott szám";
   if (els.previewRole) els.previewRole.textContent = block?.role || "";
-  if (els.previewText) els.previewText.textContent = block?.text || "Nincs betöltött blokk.";
+  updatePreviewPayload();
 }
 
 function renderBlockEditor() {
@@ -586,6 +673,19 @@ async function moveBlockSelection(delta, overlayText) {
   renderAll();
   await syncDisplay();
   if (overlayText) await flashOverlay(overlayText);
+  restartPlaybackTimerIfNeeded();
+}
+
+async function jumpToNextItem() {
+  if (!project.items.length) return;
+  const nextIndex = Math.min(project.items.length - 1, state.itemIndex + 1);
+  if (nextIndex === state.itemIndex) return;
+  state.itemIndex = nextIndex;
+  state.blockIndex = 0;
+  state.black = false;
+  renderAll();
+  await syncDisplay();
+  await flashOverlay("⏭ Következő dal eleje");
   restartPlaybackTimerIfNeeded();
 }
 
@@ -734,37 +834,73 @@ async function ensureMainFullscreen() {
 }
 
 async function syncDisplay() {
-  const item = getCurrentItem();
-  const block = getCurrentBlock();
-  if (!item || !block) return;
+  const payload = getDisplayPayload();
+  if (!payload) return;
+
+  lastDisplayPayload = payload;
+  postPreviewState();
 
   try {
-    await emitTo(DISPLAY_LABEL, "display:block", {
-      songTitle: item.title,
-      role: block.role || "",
-      text: block.text || "",
-      fullText: buildFullTextForItem(item),
-      mode: project.playbackMode,
-      black: state.black,
-      speed: state.speed,
-      isPlaying: state.isPlaying,
-      blockIndex: state.blockIndex + 1,
-      blockCount: item.blocks.length,
-      showListVisible: uiPrefs.showListDisplay,
-      showListTitles: project.items.map((it) => it.title),
-      currentItemIndex: state.itemIndex,
-      blocks: item.blocks.map((entry) => ({ role: entry.role || "", text: entry.text || "" })),
-      textStyle: getTextStyle(),
-    });
+    await emitTo(DISPLAY_LABEL, "display:block", payload);
   } catch (err) {
     console.warn("Display2 blokk küldés sikertelen:", err);
   }
 }
 
 async function flashOverlay(text) {
+  postPreviewOverlay(text);
   try {
     await emitTo(DISPLAY_LABEL, "display:overlay", { text });
   } catch {}
+}
+
+function getDisplayPayload() {
+  const item = getCurrentItem();
+  const block = getCurrentBlock();
+  if (!item || !block) return null;
+
+  return {
+    songTitle: item.title,
+    role: block.role || "",
+    text: block.text || "",
+    fullText: buildFullTextForItem(item),
+    mode: project.playbackMode,
+    black: state.black,
+    speed: state.speed,
+    isPlaying: state.isPlaying,
+    blockIndex: state.blockIndex + 1,
+    blockCount: item.blocks.length,
+    showListVisible: uiPrefs.showListDisplay,
+    showListTitles: project.items.map((it) => it.title),
+    currentItemIndex: state.itemIndex,
+    blocks: item.blocks.map((entry) => ({ role: entry.role || "", text: entry.text || "" })),
+    textStyle: getTextStyle(),
+  };
+}
+
+function postPreviewState() {
+  if (!els.displayPreviewFrame?.contentWindow || !lastDisplayPayload) return;
+  els.displayPreviewFrame.contentWindow.postMessage({
+    source: "emleksugo-main",
+    type: "display:block",
+    payload: lastDisplayPayload,
+  }, "*");
+}
+
+function updatePreviewPayload() {
+  const payload = getDisplayPayload();
+  if (!payload) return;
+  lastDisplayPayload = payload;
+  postPreviewState();
+}
+
+function postPreviewOverlay(text) {
+  if (!els.displayPreviewFrame?.contentWindow) return;
+  els.displayPreviewFrame.contentWindow.postMessage({
+    source: "emleksugo-main",
+    type: "display:overlay",
+    payload: { text },
+  }, "*");
 }
 
 function buildFullTextForItem(item) {
@@ -1095,10 +1231,10 @@ function getPlaybackModeLabel(mode) {
   return "blokkonként";
 }
 
-function saveProjectToFile() {
+async function saveProjectToFile() {
   const payload = {
     app: "EmlékSúgó",
-    version: 2,
+    version: "2.5.0",
     savedAt: new Date().toISOString(),
     project: structuredClone(project),
     sources: structuredClone(sources),
@@ -1110,7 +1246,24 @@ function saveProjectToFile() {
     },
   };
 
-  const fileName = `emleksugo_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.emleksugo.project.json`;
+  const fileName = `emleksugo_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.esp`;
+  const contents = JSON.stringify(payload, null, 2);
+
+  try {
+    const savedPath = await invoke("es_save_project_as", {
+      defaultFilename: fileName,
+      contents,
+    });
+    if (savedPath) {
+      uiPrefs.openedProjectFileName = String(savedPath).split(/[\\/]/).pop() || fileName;
+      updateImportStatus(uiPrefs.openedProjectFileName);
+      await flashOverlay("Projekt mentve");
+    }
+    return;
+  } catch (err) {
+    console.warn("Natív projektmentés sikertelen, böngészős mentésre váltok:", err);
+  }
+
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json;charset=utf-8",
   });
