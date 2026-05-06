@@ -37,6 +37,7 @@ const runtime = {
   activeRole: "",
   blockIndex: 1,
   blockCount: 1,
+  lastScrollBlockIndex: 1,
   textStyle: {
     fontSize: 42,
     offsetX: 0,
@@ -113,6 +114,14 @@ function renderBlockRail(blocks = [], activeIndex = 0) {
       `).join("")}
     </div>
   `;
+
+  els.blockRail.querySelectorAll(".rail-block").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.index);
+      if (!Number.isInteger(idx)) return;
+      await emit("display:select-block", { index: idx });
+    });
+  });
 }
 
 function applyTextStyle() {
@@ -167,6 +176,18 @@ function renderScrollBlocks(blocks) {
       </section>
     `)
     .join('<div class="separator"></div>');
+}
+
+function getScrollTopForBlock(index) {
+  const sections = Array.from(els.content.querySelectorAll(".scroll-block"));
+  if (!sections.length) return 0;
+  const safeIndex = Math.max(0, Math.min(index, sections.length - 1));
+  return sections[safeIndex]?.offsetTop || 0;
+}
+
+function clampScrollPosition() {
+  const maxScroll = Math.max(0, els.content.scrollHeight - els.contentWrap.clientHeight);
+  runtime.scrollPos = Math.max(0, Math.min(maxScroll, runtime.scrollPos));
 }
 
 function startScroll(direction = "up") {
@@ -246,6 +267,7 @@ async function invokeWindowCommand(command) {
 }
 
 function renderState(payload) {
+  const previousBlockIndex = runtime.blockIndex;
   const {
     songTitle,
     role,
@@ -313,20 +335,18 @@ function renderState(payload) {
     : [{ role: role || "", text: fullText || text || "" }];
 
   const nextKey = `scroll:${songTitle || ""}:${normalizedBlocks.map((b) => `${b.role}::${b.text}`).join("||")}`;
-  if (runtime.contentKey !== nextKey) {
+  const contentChanged = runtime.contentKey !== nextKey;
+  if (contentChanged) {
     runtime.scrollPos = runtime.mode === "scroll-down" ? 999999 : 0;
     runtime.contentKey = nextKey;
   }
 
   renderScrollBlocks(normalizedBlocks);
 
-  const maxScroll = Math.max(0, els.content.scrollHeight - els.contentWrap.clientHeight);
-  if (runtime.mode === "scroll-down" && runtime.scrollPos > maxScroll) {
-    runtime.scrollPos = maxScroll;
+  if (contentChanged || previousBlockIndex !== runtime.blockIndex) {
+    runtime.scrollPos = getScrollTopForBlock(runtime.blockIndex - 1);
   }
-  if (runtime.mode === "scroll-up" && runtime.scrollPos < 0) {
-    runtime.scrollPos = 0;
-  }
+  clampScrollPosition();
 
   updateTransform();
   updateRoleFromScroll();

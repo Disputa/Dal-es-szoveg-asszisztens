@@ -535,6 +535,17 @@ async function bindDisplaySelectionListener() {
     restartPlaybackTimerIfNeeded();
   });
 
+  await listen("display:select-block", async (event) => {
+    const idx = Number(event.payload?.index);
+    const item = getCurrentItem();
+    if (!item || !Number.isInteger(idx) || idx < 0 || idx >= item.blocks.length) return;
+    state.blockIndex = idx;
+    state.black = false;
+    renderAll();
+    await syncDisplay();
+    restartPlaybackTimerIfNeeded();
+  });
+
   await listen("display:transport", async (event) => {
     const action = String(event.payload?.action || "");
     const value = event.payload?.value;
@@ -998,6 +1009,7 @@ function postPreviewOverlay(text) {
 
 function renderMiniPreview(payload) {
   if (!els.displayPreview || !payload) return;
+  const previousBlockIndex = miniPreviewRuntime.blockIndex || 1;
 
   const {
     songTitle,
@@ -1022,6 +1034,7 @@ function renderMiniPreview(payload) {
   miniPreviewRuntime.speed = Number(speed) || 100;
   miniPreviewRuntime.blocks = Array.isArray(blocks) ? blocks : [];
   miniPreviewRuntime.activeRole = role || "";
+  miniPreviewRuntime.blockIndex = Number(blockIndex) || 1;
 
   els.displayPreview.classList.toggle("is-black", !!black);
   if (els.miniSongTitle) els.miniSongTitle.textContent = songTitle || "";
@@ -1053,12 +1066,16 @@ function renderMiniPreview(payload) {
     : [{ role: role || "", text: fullText || text || "" }];
 
   const nextKey = `scroll:${songTitle || ""}:${normalizedBlocks.map((block) => `${block.role}::${block.text}`).join("||")}`;
-  if (miniPreviewRuntime.contentKey !== nextKey) {
+  const contentChanged = miniPreviewRuntime.contentKey !== nextKey;
+  if (contentChanged) {
     miniPreviewRuntime.scrollPos = miniPreviewRuntime.mode === "scroll-down" ? 999999 : 0;
     miniPreviewRuntime.contentKey = nextKey;
   }
 
   renderMiniScrollBlocks(normalizedBlocks);
+  if (contentChanged || previousBlockIndex !== miniPreviewRuntime.blockIndex) {
+    miniPreviewRuntime.scrollPos = getMiniScrollTopForBlock(miniPreviewRuntime.blockIndex - 1);
+  }
   clampMiniScrollPosition();
   updateMiniTransform();
   updateMiniRoleFromScroll();
@@ -1156,6 +1173,13 @@ function clearMiniPreviewScroll() {
 function getMiniMaxScroll() {
   if (!els.miniContent || !els.miniContentWrap) return 0;
   return Math.max(0, els.miniContent.scrollHeight - els.miniContentWrap.clientHeight);
+}
+
+function getMiniScrollTopForBlock(index) {
+  const sections = Array.from(els.miniContent?.querySelectorAll(".mini-scroll-block") || []);
+  if (!sections.length) return 0;
+  const safeIndex = Math.max(0, Math.min(index, sections.length - 1));
+  return sections[safeIndex]?.offsetTop || 0;
 }
 
 function clampMiniScrollPosition() {
