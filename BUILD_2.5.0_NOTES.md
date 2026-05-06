@@ -35,3 +35,4 @@ Ehhez a 2.5.0-s buildhez már stabilabb alap van, de a valódi patch/update inst
 - repair/update/uninstall ágak,
 - verzió-összehasonlítás,
 - rollback vagy backup telepítés előtt.
+- 2026-05-06 utolagos javitas: a kovetkezo/elozo blokk vezerles Display2 szinkronja robusztusabb lett, a foablak preview kozvetlen mini Display2 nezetet kapott, es visszakerult a megszolalo nevenek meret- es pozicioallitasa.

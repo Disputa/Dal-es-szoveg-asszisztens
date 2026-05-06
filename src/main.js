@@ -11,12 +11,18 @@ import {
   PhysicalSize,
 } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { emitTo, listen } from "@tauri-apps/api/event";
+import { emit, emitTo, listen } from "@tauri-apps/api/event";
 
 const DISPLAY_LABEL = "emlek-sugo-display";
 
 const DEFAULT_TEXT_STYLE = {
   fontSize: 42,
+  offsetX: 0,
+  offsetY: 0,
+};
+
+const DEFAULT_ROLE_STYLE = {
+  fontSize: 52,
   offsetX: 0,
   offsetY: 0,
 };
@@ -39,6 +45,7 @@ const uiPrefs = {
   showListDisplay: false,
   openedProjectFileName: "",
   textStyle: { ...DEFAULT_TEXT_STYLE },
+  roleStyle: { ...DEFAULT_ROLE_STYLE },
 };
 
 const state = {
@@ -78,6 +85,12 @@ const els = {
   offsetXInput: document.getElementById("offsetXInput"),
   offsetYRange: document.getElementById("offsetYRange"),
   offsetYInput: document.getElementById("offsetYInput"),
+  roleFontSizeRange: document.getElementById("roleFontSizeRange"),
+  roleFontSizeInput: document.getElementById("roleFontSizeInput"),
+  roleOffsetXRange: document.getElementById("roleOffsetXRange"),
+  roleOffsetXInput: document.getElementById("roleOffsetXInput"),
+  roleOffsetYRange: document.getElementById("roleOffsetYRange"),
+  roleOffsetYInput: document.getElementById("roleOffsetYInput"),
   showListMainCheckbox: document.getElementById("showListMainCheckbox"),
   showListDisplayCheckbox: document.getElementById("showListDisplayCheckbox"),
   importStatus: document.getElementById("importStatus"),
@@ -101,11 +114,29 @@ const els = {
   previewTitle: document.getElementById("previewTitle"),
   previewRole: document.getElementById("previewRole"),
   displayPreviewFrame: document.getElementById("displayPreviewFrame"),
+  displayPreview: document.getElementById("displayPreview"),
+  miniSongTitle: document.getElementById("miniSongTitle"),
+  miniRole: document.getElementById("miniRole"),
+  miniShowList: document.getElementById("miniShowList"),
+  miniBlockRail: document.getElementById("miniBlockRail"),
+  miniContentWrap: document.getElementById("miniContentWrap"),
+  miniContent: document.getElementById("miniContent"),
+  miniOverlay: document.getElementById("miniOverlay"),
   currentRole: document.getElementById("currentRole"),
   blockList: document.getElementById("blockList"),
 };
 
 let lastDisplayPayload = null;
+const miniPreviewRuntime = {
+  frameId: null,
+  isPlaying: false,
+  scrollPos: 0,
+  speed: 100,
+  mode: "blocks",
+  blocks: [],
+  activeRole: "",
+  contentKey: "",
+};
 
 function getTextStyle() {
   return {
@@ -126,8 +157,27 @@ function setTextStyleValue(key, rawValue) {
   uiPrefs.textStyle[key] = clampNumber(rawValue, DEFAULT_TEXT_STYLE[key], min, max);
 }
 
+function getRoleStyle() {
+  return {
+    fontSize: clampNumber(uiPrefs.roleStyle?.fontSize, DEFAULT_ROLE_STYLE.fontSize, 18, 96),
+    offsetX: clampNumber(uiPrefs.roleStyle?.offsetX, DEFAULT_ROLE_STYLE.offsetX, -500, 500),
+    offsetY: clampNumber(uiPrefs.roleStyle?.offsetY, DEFAULT_ROLE_STYLE.offsetY, -220, 360),
+  };
+}
+
+function setRoleStyleValue(key, rawValue) {
+  if (!uiPrefs.roleStyle) uiPrefs.roleStyle = { ...DEFAULT_ROLE_STYLE };
+  const limits = {
+    fontSize: [18, 96],
+    offsetX: [-500, 500],
+    offsetY: [-220, 360],
+  };
+  const [min, max] = limits[key];
+  uiPrefs.roleStyle[key] = clampNumber(rawValue, DEFAULT_ROLE_STYLE[key], min, max);
+}
+
 function applyTextStyleToPreviewElements() {
-  postPreviewState();
+  updatePreviewPayload();
 }
 
 async function updateTextStyleAndSync(key, value) {
@@ -137,10 +187,20 @@ async function updateTextStyleAndSync(key, value) {
   await syncDisplay();
 }
 
+async function updateRoleStyleAndSync(key, value) {
+  setRoleStyleValue(key, value);
+  syncControlValuesFromState();
+  renderPreview();
+  await syncDisplay();
+}
+
 
 init().catch(console.error);
 
 async function init() {
+  if (els.displayPreview) {
+    els.displayPreview.style.setProperty("--display-bg-image", `url("${splashImage}")`);
+  }
   setupSplash();
   bindUi();
   await bindDisplaySelectionListener();
@@ -265,6 +325,12 @@ function bindUi() {
   bindTextStyleControl(els.offsetXInput, "offsetX");
   bindTextStyleControl(els.offsetYRange, "offsetY");
   bindTextStyleControl(els.offsetYInput, "offsetY");
+  bindRoleStyleControl(els.roleFontSizeRange, "fontSize");
+  bindRoleStyleControl(els.roleFontSizeInput, "fontSize");
+  bindRoleStyleControl(els.roleOffsetXRange, "offsetX");
+  bindRoleStyleControl(els.roleOffsetXInput, "offsetX");
+  bindRoleStyleControl(els.roleOffsetYRange, "offsetY");
+  bindRoleStyleControl(els.roleOffsetYInput, "offsetY");
 
   els.showListMainCheckbox?.addEventListener("change", () => {
     uiPrefs.showListMain = !!els.showListMainCheckbox.checked;
@@ -403,6 +469,12 @@ function bindTextStyleControl(element, key) {
   });
 }
 
+function bindRoleStyleControl(element, key) {
+  element?.addEventListener("input", async (e) => {
+    await updateRoleStyleAndSync(key, e.target.value);
+  });
+}
+
 async function invokeWindowCommand(command) {
   try {
     await invoke(command);
@@ -448,6 +520,10 @@ function resizePreviewFrame() {
 }
 
 async function bindDisplaySelectionListener() {
+  await listen("display:request-state", async () => {
+    await syncDisplay();
+  });
+
   await listen("display:select-item", async (event) => {
     const idx = Number(event.payload?.index);
     if (!Number.isInteger(idx) || idx < 0 || idx >= project.items.length) return;
@@ -498,6 +574,7 @@ async function bindDisplaySelectionListener() {
 
 function syncControlValuesFromState() {
   const textStyle = getTextStyle();
+  const roleStyle = getRoleStyle();
   if (els.playbackModeSelect) els.playbackModeSelect.value = project.playbackMode;
   if (els.speedRange) els.speedRange.value = String(state.speed);
   if (els.speedValue) els.speedValue.textContent = `${state.speed}%`;
@@ -507,6 +584,12 @@ function syncControlValuesFromState() {
   if (els.offsetXInput) els.offsetXInput.value = String(textStyle.offsetX);
   if (els.offsetYRange) els.offsetYRange.value = String(textStyle.offsetY);
   if (els.offsetYInput) els.offsetYInput.value = String(textStyle.offsetY);
+  if (els.roleFontSizeRange) els.roleFontSizeRange.value = String(roleStyle.fontSize);
+  if (els.roleFontSizeInput) els.roleFontSizeInput.value = String(roleStyle.fontSize);
+  if (els.roleOffsetXRange) els.roleOffsetXRange.value = String(roleStyle.offsetX);
+  if (els.roleOffsetXInput) els.roleOffsetXInput.value = String(roleStyle.offsetX);
+  if (els.roleOffsetYRange) els.roleOffsetYRange.value = String(roleStyle.offsetY);
+  if (els.roleOffsetYInput) els.roleOffsetYInput.value = String(roleStyle.offsetY);
   if (els.showListMainCheckbox) els.showListMainCheckbox.checked = uiPrefs.showListMain;
   if (els.showListDisplayCheckbox) els.showListDisplayCheckbox.checked = uiPrefs.showListDisplay;
 }
@@ -838,19 +921,27 @@ async function syncDisplay() {
   if (!payload) return;
 
   lastDisplayPayload = payload;
+  renderMiniPreview(payload);
   postPreviewState();
 
   try {
-    await emitTo(DISPLAY_LABEL, "display:block", payload);
+    await Promise.allSettled([
+      emitTo(DISPLAY_LABEL, "display:block", payload),
+      emit("display:block", payload),
+    ]);
   } catch (err) {
     console.warn("Display2 blokk küldés sikertelen:", err);
   }
 }
 
 async function flashOverlay(text) {
+  setMiniOverlay(text);
   postPreviewOverlay(text);
   try {
-    await emitTo(DISPLAY_LABEL, "display:overlay", { text });
+    await Promise.allSettled([
+      emitTo(DISPLAY_LABEL, "display:overlay", { text }),
+      emit("display:overlay", { text }),
+    ]);
   } catch {}
 }
 
@@ -875,6 +966,7 @@ function getDisplayPayload() {
     currentItemIndex: state.itemIndex,
     blocks: item.blocks.map((entry) => ({ role: entry.role || "", text: entry.text || "" })),
     textStyle: getTextStyle(),
+    roleStyle: getRoleStyle(),
   };
 }
 
@@ -891,6 +983,7 @@ function updatePreviewPayload() {
   const payload = getDisplayPayload();
   if (!payload) return;
   lastDisplayPayload = payload;
+  renderMiniPreview(payload);
   postPreviewState();
 }
 
@@ -901,6 +994,201 @@ function postPreviewOverlay(text) {
     type: "display:overlay",
     payload: { text },
   }, "*");
+}
+
+function renderMiniPreview(payload) {
+  if (!els.displayPreview || !payload) return;
+
+  const {
+    songTitle,
+    role,
+    text,
+    fullText,
+    mode,
+    black,
+    speed,
+    isPlaying,
+    blocks,
+    blockIndex,
+    showListTitles,
+    currentItemIndex,
+    showListVisible,
+    textStyle,
+    roleStyle,
+  } = payload;
+
+  miniPreviewRuntime.isPlaying = !!isPlaying;
+  miniPreviewRuntime.mode = mode || "blocks";
+  miniPreviewRuntime.speed = Number(speed) || 100;
+  miniPreviewRuntime.blocks = Array.isArray(blocks) ? blocks : [];
+  miniPreviewRuntime.activeRole = role || "";
+
+  els.displayPreview.classList.toggle("is-black", !!black);
+  if (els.miniSongTitle) els.miniSongTitle.textContent = songTitle || "";
+  if (els.miniRole) els.miniRole.textContent = role || "";
+  renderMiniShowList(showListTitles || [], currentItemIndex || 0, !!showListVisible);
+  renderMiniBlockRail(miniPreviewRuntime.blocks, (Number(blockIndex) || 1) - 1);
+  applyMiniTextStyle(textStyle);
+  applyMiniRoleStyle(roleStyle);
+  clearMiniPreviewScroll();
+
+  if (black) {
+    if (els.miniContent) els.miniContent.textContent = "";
+    return;
+  }
+
+  if (miniPreviewRuntime.mode === "blocks") {
+    miniPreviewRuntime.contentKey = `block:${songTitle || ""}:${role || ""}:${text || ""}`;
+    if (els.miniContent) {
+      els.miniContent.innerHTML = "";
+      els.miniContent.textContent = text || "";
+      els.miniContent.style.transform = "translateY(0px)";
+    }
+    miniPreviewRuntime.scrollPos = 0;
+    return;
+  }
+
+  const normalizedBlocks = miniPreviewRuntime.blocks.length
+    ? miniPreviewRuntime.blocks.map((block) => ({ role: block.role || "", text: block.text || "" }))
+    : [{ role: role || "", text: fullText || text || "" }];
+
+  const nextKey = `scroll:${songTitle || ""}:${normalizedBlocks.map((block) => `${block.role}::${block.text}`).join("||")}`;
+  if (miniPreviewRuntime.contentKey !== nextKey) {
+    miniPreviewRuntime.scrollPos = miniPreviewRuntime.mode === "scroll-down" ? 999999 : 0;
+    miniPreviewRuntime.contentKey = nextKey;
+  }
+
+  renderMiniScrollBlocks(normalizedBlocks);
+  clampMiniScrollPosition();
+  updateMiniTransform();
+  updateMiniRoleFromScroll();
+
+  if (miniPreviewRuntime.isPlaying) {
+    startMiniPreviewScroll(miniPreviewRuntime.mode === "scroll-down" ? "down" : "up");
+  }
+}
+
+function renderMiniShowList(titles, activeIndex, visible) {
+  if (!els.miniShowList) return;
+  els.miniShowList.classList.toggle("visible", !!visible);
+  els.miniShowList.innerHTML = titles
+    .map((title, index) => `
+      <div class="mini-show-item ${index === activeIndex ? "active" : ""}">
+        <span>${index + 1}. ${escapeHtml(title)}</span>
+      </div>
+    `)
+    .join("");
+}
+
+function renderMiniBlockRail(blocks, activeIndex) {
+  if (!els.miniBlockRail) return;
+  els.miniBlockRail.innerHTML = `
+    <div class="mini-rail-title">BLOKKOK</div>
+    ${blocks.map((block, index) => `
+      <div class="mini-rail-block ${index === activeIndex ? "active" : ""}">
+        <span class="mini-rail-index">${index + 1}</span>
+        <span class="mini-rail-text">
+          <strong>${escapeHtml(block.role || "")}</strong>
+          <span>${escapeHtml(block.text || "")}</span>
+        </span>
+      </div>
+    `).join("")}
+  `;
+}
+
+function applyMiniTextStyle(textStyle = {}) {
+  if (!els.miniContentWrap) return;
+  const fontSize = clampNumber(textStyle.fontSize, DEFAULT_TEXT_STYLE.fontSize, 16, 96);
+  const offsetX = clampNumber(textStyle.offsetX, DEFAULT_TEXT_STYLE.offsetX, -400, 400);
+  const offsetY = clampNumber(textStyle.offsetY, DEFAULT_TEXT_STYLE.offsetY, -300, 300);
+  els.miniContentWrap.style.setProperty("--mini-font-size", `${fontSize * 0.28}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-x", `${offsetX * 0.28}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-y", `${offsetY * 0.28}px`);
+}
+
+function applyMiniRoleStyle(roleStyle = {}) {
+  if (!els.miniRole) return;
+  const fontSize = clampNumber(roleStyle.fontSize, DEFAULT_ROLE_STYLE.fontSize, 18, 96);
+  const offsetX = clampNumber(roleStyle.offsetX, DEFAULT_ROLE_STYLE.offsetX, -500, 500);
+  const offsetY = clampNumber(roleStyle.offsetY, DEFAULT_ROLE_STYLE.offsetY, -220, 360);
+  els.miniRole.style.fontSize = `${fontSize * 0.38}px`;
+  els.miniRole.style.transform = `translate(calc(-50% + ${offsetX * 0.28}px), ${offsetY * 0.28}px)`;
+}
+
+function renderMiniScrollBlocks(blocks) {
+  if (!els.miniContent) return;
+  els.miniContent.innerHTML = blocks
+    .map((block) => `
+      <section class="mini-scroll-block" data-role="${escapeAttribute(block.role || "")}">
+        <div>${escapeHtml(block.text || "")}</div>
+      </section>
+    `)
+    .join("");
+}
+
+function startMiniPreviewScroll(direction = "up") {
+  clearMiniPreviewScroll();
+  const tick = () => {
+    const maxScroll = getMiniMaxScroll();
+    const step = Math.max(0.15, miniPreviewRuntime.speed / 100) * 0.7;
+    miniPreviewRuntime.scrollPos += direction === "down" ? -step : step;
+    miniPreviewRuntime.scrollPos = Math.max(0, Math.min(maxScroll, miniPreviewRuntime.scrollPos));
+    updateMiniTransform();
+    updateMiniRoleFromScroll();
+
+    const canContinue =
+      (direction === "down" && miniPreviewRuntime.scrollPos > 0) ||
+      (direction !== "down" && miniPreviewRuntime.scrollPos < maxScroll);
+    if (miniPreviewRuntime.isPlaying && canContinue) {
+      miniPreviewRuntime.frameId = requestAnimationFrame(tick);
+    }
+  };
+  miniPreviewRuntime.frameId = requestAnimationFrame(tick);
+}
+
+function clearMiniPreviewScroll() {
+  if (miniPreviewRuntime.frameId) {
+    cancelAnimationFrame(miniPreviewRuntime.frameId);
+    miniPreviewRuntime.frameId = null;
+  }
+}
+
+function getMiniMaxScroll() {
+  if (!els.miniContent || !els.miniContentWrap) return 0;
+  return Math.max(0, els.miniContent.scrollHeight - els.miniContentWrap.clientHeight);
+}
+
+function clampMiniScrollPosition() {
+  miniPreviewRuntime.scrollPos = Math.max(0, Math.min(getMiniMaxScroll(), miniPreviewRuntime.scrollPos));
+}
+
+function updateMiniTransform() {
+  if (els.miniContent) {
+    els.miniContent.style.transform = `translateY(${-miniPreviewRuntime.scrollPos}px)`;
+  }
+}
+
+function updateMiniRoleFromScroll() {
+  if (!els.miniRole) return;
+  const sections = Array.from(els.miniContent?.querySelectorAll(".mini-scroll-block") || []);
+  if (!sections.length) {
+    els.miniRole.textContent = miniPreviewRuntime.activeRole || "";
+    return;
+  }
+  const marker = miniPreviewRuntime.scrollPos + (els.miniContentWrap?.clientHeight || 0) * 0.5;
+  let activeIndex = 0;
+  for (let i = 0; i < sections.length; i += 1) {
+    if (sections[i].offsetTop <= marker) activeIndex = i;
+  }
+  miniPreviewRuntime.activeRole = miniPreviewRuntime.blocks[activeIndex]?.role || sections[activeIndex]?.dataset.role || "";
+  els.miniRole.textContent = miniPreviewRuntime.activeRole;
+}
+
+function setMiniOverlay(text) {
+  if (!els.miniOverlay) return;
+  els.miniOverlay.textContent = text || "";
+  els.miniOverlay.classList.add("visible");
+  window.setTimeout(() => els.miniOverlay?.classList.remove("visible"), 900);
 }
 
 function buildFullTextForItem(item) {
@@ -1291,6 +1579,10 @@ function loadProjectFromObject(data) {
   uiPrefs.textStyle = {
     ...DEFAULT_TEXT_STYLE,
     ...(data.uiPrefs?.textStyle || {}),
+  };
+  uiPrefs.roleStyle = {
+    ...DEFAULT_ROLE_STYLE,
+    ...(data.uiPrefs?.roleStyle || {}),
   };
   state.speed = clampNumber(data.uiState?.speed, 100, 0, 200);
   state.itemIndex = clampNumber(data.uiState?.itemIndex, 0, 0, Math.max(project.items.length - 1, 0));

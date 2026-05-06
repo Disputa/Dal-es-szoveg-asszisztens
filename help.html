@@ -38,6 +38,7 @@
       h1, h2 { margin: 0; }
       h1 { font-size: 24px; }
       h2 { font-size: 18px; color: var(--accent); margin-bottom: 10px; }
+      h3 { margin: 14px 0 6px; font-size: 15px; color: #dbe9ff; }
       main {
         display: grid;
         grid-template-columns: minmax(360px, 0.9fr) minmax(460px, 1.1fr);
@@ -52,6 +53,7 @@
       }
       .stack { display: grid; gap: 14px; }
       ul { margin: 8px 0 0; padding-left: 20px; }
+      li + li { margin-top: 5px; }
       code {
         background: rgba(255,255,255,0.08);
         border-radius: 5px;
@@ -91,12 +93,18 @@
         <section>
           <h2>Gyors indítás</h2>
           <ul>
-            <li>Műsorrend betöltése: `.txt` vagy `.docx` fájlból.</li>
-            <li>Szövegkönyv betöltése: `.txt` vagy `.docx` fájlból.</li>
+            <li>Műsorrend betöltése: <code>.txt</code> vagy <code>.docx</code> fájlból.</li>
+            <li>Szövegkönyv betöltése: <code>.txt</code> vagy <code>.docx</code> fájlból.</li>
             <li>Kijelző kiválasztása után a <span class="accent">Kijelző nyitása</span> gomb küldi ki a Display2 ablakot.</li>
-            <li>A projektet `.esp` fájlba érdemes menteni, így később visszatölthető.</li>
+            <li>A projektet <code>.esp</code> fájlba érdemes menteni, így később visszatölthető.</li>
+          </ul>
+          <h3>Súgó elérése</h3>
+          <ul>
+            <li>A főablak bal oldali kezelősávjában a <span class="accent">Súgó megnyitása</span> gomb nyitja meg ezt az ablakot.</li>
+            <li>A PDF link a korábbi gyors súgót is megnyitja, ha nyomtatható referencia kell.</li>
           </ul>
         </section>
+
         <section>
           <h2>Vezérlés</h2>
           <ul>
@@ -108,14 +116,42 @@
             <li><code>↑</code> / <code>↓</code>: sebesség állítása</li>
             <li><code>B</code>: black kapcsolás</li>
           </ul>
-        </section>
-        <section>
-          <h2>2.5.0 újdonságok</h2>
+          <h3>Fontos működés</h3>
           <ul>
-            <li>Élő Display2 előnézet a főablakban.</li>
+            <li>Az előző/következő blokk parancs a szerkesztőben, a főablak preview-ban és a Display2 ablakban is ugyanazt az aktuális blokkot mozgatja.</li>
+            <li>A Display2 saját vezérlőgombjai ugyanazokat a parancsokat küldik vissza a főablaknak, mint a fő képernyő gombjai.</li>
+            <li>A <span class="accent">Következő dal eleje</span> az aktuális műsorszám után következő dal első blokkjára ugrik.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Display2 Megjelenés</h2>
+          <ul>
+            <li><span class="accent">Display2 szövegméret</span>: a fő felirat betűméretét állítja.</li>
+            <li><span class="accent">Display2 vízszintes/függőleges eltolás</span>: a fő felirat helyzetét finomhangolja.</li>
+            <li><span class="accent">Megszólaló név mérete</span>: az énekes/szereplő nevének betűméretét állítja.</li>
+            <li><span class="accent">Megszólaló név vízszintes/függőleges pozíciója</span>: a nevet a középre igazított alaphelyzethez képest mozgatja.</li>
+            <li>A fenti beállítások a projekt mentésekor az <code>.esp</code> fájlba is bekerülnek.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Preview</h2>
+          <ul>
+            <li>A főablak preview-ja a Display2 kicsinyített nézete, nem külön szöveges emuláció.</li>
+            <li>Blokkonkénti módban az aktuális blokk látszik; scroll módban a szöveg mozgása a beállított sebességet követi.</li>
+            <li>Ha a Display2-n műsorlista vagy blokk-sáv látható, a preview is ugyanezt a szerkezetet mutatja kicsiben.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>2.5.0 Újdonságok</h2>
+          <ul>
+            <li>Élő Display2 előnézet a főablakban: háttérképpel, műsorlistával, blokk-sávval és szinkronizált scroll sebességgel.</li>
             <li>Háttérképes Display2 megjelenés és blokk-sáv.</li>
-            <li>A megszólaló neve középre került.</li>
+            <li>A megszólaló neve középre került, és külön állítható a mérete, vízszintes pozíciója és függőleges pozíciója.</li>
             <li>Mindkét kijelzőn saját ablakgombok: tálcára rejtés, ablak/teljes képernyő, bezárás.</li>
+            <li>Robusztusabb Display2 szinkron: az aktuális blokk és a lejátszási állapot az ablak megnyitásakor is frissül.</li>
           </ul>
         </section>
       </div>

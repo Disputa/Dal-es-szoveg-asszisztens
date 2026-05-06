@@ -99,7 +99,7 @@ body {
   position: fixed;
   top: 26px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(calc(-50% + 0px), 0);
   max-width: min(760px, 52vw);
   text-align: center;
   font-size: 52px;

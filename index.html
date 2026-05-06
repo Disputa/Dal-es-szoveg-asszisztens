@@ -72,6 +72,24 @@
             <input id="offsetYInput" type="number" min="-300" max="300" step="5" value="0" />
           </div>
 
+          <label for="roleFontSizeRange">Megszólaló név mérete</label>
+          <div class="dual-control-inputs">
+            <input id="roleFontSizeRange" type="range" min="18" max="96" step="1" value="52" />
+            <input id="roleFontSizeInput" type="number" min="18" max="96" step="1" value="52" />
+          </div>
+
+          <label for="roleOffsetXRange">Megszólaló név vízszintes pozíciója</label>
+          <div class="dual-control-inputs">
+            <input id="roleOffsetXRange" type="range" min="-500" max="500" step="5" value="0" />
+            <input id="roleOffsetXInput" type="number" min="-500" max="500" step="5" value="0" />
+          </div>
+
+          <label for="roleOffsetYRange">Megszólaló név függőleges pozíciója</label>
+          <div class="dual-control-inputs">
+            <input id="roleOffsetYRange" type="range" min="-220" max="360" step="5" value="0" />
+            <input id="roleOffsetYInput" type="number" min="-220" max="360" step="5" value="0" />
+          </div>
+
           <label class="check-row"><input id="showListMainCheckbox" type="checkbox" checked /> <span>Műsorlista a főfelületen</span></label>
           <label class="check-row"><input id="showListDisplayCheckbox" type="checkbox" /> <span>Műsorlista a Display2-n</span></label>
 
@@ -93,8 +111,17 @@
             <div id="previewTitle" class="preview-title">-</div>
             <div id="previewRole" class="preview-role"></div>
           </div>
-          <div class="live-preview-frame">
-            <iframe id="displayPreviewFrame" title="Display2 élő előnézet" src="display.html?preview=1"></iframe>
+          <div id="displayPreview" class="display-preview-mini" aria-label="Display2 elo elonezet">
+            <div class="mini-top">
+              <div id="miniSongTitle" class="mini-song-title"></div>
+              <div id="miniRole" class="mini-role"></div>
+            </div>
+            <div id="miniShowList" class="mini-show-list"></div>
+            <div id="miniBlockRail" class="mini-block-rail"></div>
+            <div id="miniContentWrap" class="mini-content-wrap">
+              <div id="miniContent" class="mini-content"></div>
+            </div>
+            <div id="miniOverlay" class="mini-overlay"></div>
           </div>
         </section>
 

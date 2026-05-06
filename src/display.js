@@ -42,6 +42,11 @@ const runtime = {
     offsetX: 0,
     offsetY: 0,
   },
+  roleStyle: {
+    fontSize: 52,
+    offsetX: 0,
+    offsetY: 0,
+  },
 };
 
 function clearScrollAnimation() {
@@ -117,6 +122,15 @@ function applyTextStyle() {
 
   els.content.style.setProperty("--display-font-size", `${fontSize}px`);
   els.contentWrap.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+}
+
+function applyRoleStyle() {
+  const fontSize = Math.max(18, Number(runtime.roleStyle?.fontSize) || 52);
+  const offsetX = Number(runtime.roleStyle?.offsetX) || 0;
+  const offsetY = Number(runtime.roleStyle?.offsetY) || 0;
+
+  els.role.style.fontSize = `${fontSize}px`;
+  els.role.style.transform = `translate(calc(-50% + ${offsetX}px), ${offsetY}px)`;
 }
 
 function updateTransform() {
@@ -248,6 +262,7 @@ function renderState(payload) {
     blockIndex,
     blockCount,
     textStyle,
+    roleStyle,
   } = payload;
 
   runtime.mode = mode || "blocks";
@@ -262,6 +277,11 @@ function renderState(payload) {
     offsetX: Number(textStyle?.offsetX) || 0,
     offsetY: Number(textStyle?.offsetY) || 0,
   };
+  runtime.roleStyle = {
+    fontSize: Number(roleStyle?.fontSize) || 52,
+    offsetX: Number(roleStyle?.offsetX) || 0,
+    offsetY: Number(roleStyle?.offsetY) || 0,
+  };
 
   els.songTitle.textContent = songTitle || "";
   els.role.textContent = runtime.mode === "blocks" ? (role || "") : (runtime.activeRole || "");
@@ -269,6 +289,7 @@ function renderState(payload) {
   renderBlockRail(runtime.blocks, runtime.blockIndex - 1);
   renderTransportHud();
   applyTextStyle();
+  applyRoleStyle();
 
   clearScrollAnimation();
 
@@ -331,6 +352,8 @@ if (!isPreview) {
   listen("display:overlay", (event) => {
     setOverlay(event.payload?.text || "");
   }).catch((err) => console.warn("Display overlay listener hiba:", err));
+
+  emit("display:request-state", {}).catch((err) => console.warn("Display allapotkeres hiba:", err));
 }
 
 window.addEventListener("message", (event) => {
