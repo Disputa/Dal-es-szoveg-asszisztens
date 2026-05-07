@@ -175,6 +175,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
   padding: 10px;
+  z-index: 12;
+  pointer-events: auto;
 }
 
 .block-rail-title {
@@ -207,6 +209,13 @@ body {
   color: #fff;
   margin-bottom: 8px;
   padding: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.rail-block * {
+  pointer-events: none;
 }
 
 .rail-block.active {

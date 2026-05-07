@@ -116,12 +116,20 @@ function renderBlockRail(blocks = [], activeIndex = 0) {
   `;
 
   els.blockRail.querySelectorAll(".rail-block").forEach((btn) => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("pointerup", async (event) => {
+      event.preventDefault();
       const idx = Number(btn.dataset.index);
       if (!Number.isInteger(idx)) return;
-      await emit("display:select-block", { index: idx });
+      await selectBlockFromRail(idx);
     });
   });
+}
+
+async function selectBlockFromRail(index) {
+  await Promise.allSettled([
+    emit("display:select-block", { index }),
+    emit("display:transport", { action: "select-block", value: index }),
+  ]);
 }
 
 function applyTextStyle() {

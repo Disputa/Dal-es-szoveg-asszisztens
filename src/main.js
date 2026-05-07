@@ -574,14 +574,7 @@ async function bindDisplaySelectionListener() {
   });
 
   await listen("display:select-block", async (event) => {
-    const idx = Number(event.payload?.index);
-    const item = getCurrentItem();
-    if (!item || !Number.isInteger(idx) || idx < 0 || idx >= item.blocks.length) return;
-    state.blockIndex = idx;
-    state.black = false;
-    renderAll();
-    await syncDisplay();
-    restartPlaybackTimerIfNeeded();
+    await selectDisplayBlock(Number(event.payload?.index));
   });
 
   await listen("display:transport", async (event) => {
@@ -615,10 +608,23 @@ async function bindDisplaySelectionListener() {
         restartPlaybackTimerIfNeeded();
         await syncDisplay();
         break;
+      case "select-block":
+        await selectDisplayBlock(Number(value));
+        break;
       default:
         break;
     }
   });
+}
+
+async function selectDisplayBlock(idx) {
+  const item = getCurrentItem();
+  if (!item || !Number.isInteger(idx) || idx < 0 || idx >= item.blocks.length) return;
+  state.blockIndex = idx;
+  state.black = false;
+  renderAll();
+  await syncDisplay();
+  restartPlaybackTimerIfNeeded();
 }
 
 function syncControlValuesFromState() {
