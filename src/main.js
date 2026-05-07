@@ -136,6 +136,7 @@ const miniPreviewRuntime = {
   blocks: [],
   activeRole: "",
   contentKey: "",
+  scale: 1,
 };
 
 function getTextStyle() {
@@ -200,6 +201,13 @@ init().catch(console.error);
 async function init() {
   if (els.displayPreview) {
     els.displayPreview.style.setProperty("--display-bg-image", `url("${splashImage}")`);
+    updateMiniPreviewScale();
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(() => {
+        updateMiniPreviewScale();
+        updatePreviewPayload();
+      }).observe(els.displayPreview);
+    }
   }
   setupSplash();
   bindUi();
@@ -389,7 +397,11 @@ function bindUi() {
     resizePreviewFrame();
     updatePreviewPayload();
   });
-  window.addEventListener("resize", resizePreviewFrame);
+  window.addEventListener("resize", () => {
+    resizePreviewFrame();
+    updateMiniPreviewScale();
+    updatePreviewPayload();
+  });
   window.addEventListener("message", (event) => {
     if (event.data?.source !== "emleksugo-display-preview") return;
     if (event.data.type === "display:ready") {
@@ -517,6 +529,15 @@ function resizePreviewFrame() {
   const scale = holder.clientWidth / 1280;
   holder.style.setProperty("--preview-scale", String(scale));
   holder.style.height = `${720 * scale}px`;
+}
+
+function updateMiniPreviewScale() {
+  if (!els.displayPreview) return;
+  const scale = els.displayPreview.clientWidth > 0
+    ? els.displayPreview.clientWidth / 1280
+    : 1;
+  miniPreviewRuntime.scale = scale;
+  els.displayPreview.style.setProperty("--mini-scale", String(scale));
 }
 
 async function bindDisplaySelectionListener() {
@@ -1009,6 +1030,7 @@ function postPreviewOverlay(text) {
 
 function renderMiniPreview(payload) {
   if (!els.displayPreview || !payload) return;
+  updateMiniPreviewScale();
   const previousBlockIndex = miniPreviewRuntime.blockIndex || 1;
 
   const {
@@ -1041,6 +1063,8 @@ function renderMiniPreview(payload) {
   if (els.miniRole) els.miniRole.textContent = role || "";
   renderMiniShowList(showListTitles || [], currentItemIndex || 0, !!showListVisible);
   renderMiniBlockRail(miniPreviewRuntime.blocks, (Number(blockIndex) || 1) - 1);
+  els.miniContentWrap?.classList.toggle("has-show-list", !!showListVisible);
+  els.miniContentWrap?.classList.toggle("has-block-rail", miniPreviewRuntime.blocks.length > 1);
   applyMiniTextStyle(textStyle);
   applyMiniRoleStyle(roleStyle);
   clearMiniPreviewScroll();
@@ -1115,21 +1139,23 @@ function renderMiniBlockRail(blocks, activeIndex) {
 
 function applyMiniTextStyle(textStyle = {}) {
   if (!els.miniContentWrap) return;
+  const scale = miniPreviewRuntime.scale || 1;
   const fontSize = clampNumber(textStyle.fontSize, DEFAULT_TEXT_STYLE.fontSize, 16, 96);
   const offsetX = clampNumber(textStyle.offsetX, DEFAULT_TEXT_STYLE.offsetX, -400, 400);
   const offsetY = clampNumber(textStyle.offsetY, DEFAULT_TEXT_STYLE.offsetY, -300, 300);
-  els.miniContentWrap.style.setProperty("--mini-font-size", `${fontSize * 0.28}px`);
-  els.miniContentWrap.style.setProperty("--mini-offset-x", `${offsetX * 0.28}px`);
-  els.miniContentWrap.style.setProperty("--mini-offset-y", `${offsetY * 0.28}px`);
+  els.miniContentWrap.style.setProperty("--mini-font-size", `${fontSize * scale}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-x", `${offsetX * scale}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-y", `${offsetY * scale}px`);
 }
 
 function applyMiniRoleStyle(roleStyle = {}) {
   if (!els.miniRole) return;
+  const scale = miniPreviewRuntime.scale || 1;
   const fontSize = clampNumber(roleStyle.fontSize, DEFAULT_ROLE_STYLE.fontSize, 18, 96);
   const offsetX = clampNumber(roleStyle.offsetX, DEFAULT_ROLE_STYLE.offsetX, -500, 500);
   const offsetY = clampNumber(roleStyle.offsetY, DEFAULT_ROLE_STYLE.offsetY, -220, 360);
-  els.miniRole.style.fontSize = `${fontSize * 0.38}px`;
-  els.miniRole.style.transform = `translate(calc(-50% + ${offsetX * 0.28}px), ${offsetY * 0.28}px)`;
+  els.miniRole.style.fontSize = `${fontSize * scale}px`;
+  els.miniRole.style.transform = `translate(calc(-50% + ${offsetX * scale}px), ${offsetY * scale}px)`;
 }
 
 function renderMiniScrollBlocks(blocks) {
