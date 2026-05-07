@@ -27,6 +27,11 @@ const DEFAULT_ROLE_STYLE = {
   offsetY: 0,
 };
 
+const DEFAULT_DISPLAY_SIZE = {
+  width: 1280,
+  height: 720,
+};
+
 const project = {
   title: "EmlékSúgó",
   playbackMode: "blocks",
@@ -115,6 +120,7 @@ const els = {
   previewRole: document.getElementById("previewRole"),
   displayPreviewFrame: document.getElementById("displayPreviewFrame"),
   displayPreview: document.getElementById("displayPreview"),
+  miniStage: document.getElementById("miniStage"),
   miniSongTitle: document.getElementById("miniSongTitle"),
   miniRole: document.getElementById("miniRole"),
   miniShowList: document.getElementById("miniShowList"),
@@ -137,6 +143,7 @@ const miniPreviewRuntime = {
   activeRole: "",
   contentKey: "",
   scale: 1,
+  displaySize: { ...DEFAULT_DISPLAY_SIZE },
 };
 
 function getTextStyle() {
@@ -352,6 +359,7 @@ function bindUi() {
 
   els.monitorSelect?.addEventListener("change", (e) => {
     state.selectedMonitorIndex = Number(e.target.value);
+    updatePreviewPayload();
   });
 
   els.openDisplayBtn?.addEventListener("click", async () => {
@@ -533,11 +541,20 @@ function resizePreviewFrame() {
 
 function updateMiniPreviewScale() {
   if (!els.displayPreview) return;
+  const displaySize = miniPreviewRuntime.displaySize || DEFAULT_DISPLAY_SIZE;
+  const width = Math.max(1, Number(displaySize.width) || DEFAULT_DISPLAY_SIZE.width);
+  const height = Math.max(1, Number(displaySize.height) || DEFAULT_DISPLAY_SIZE.height);
+  els.displayPreview.style.aspectRatio = `${width} / ${height}`;
   const scale = els.displayPreview.clientWidth > 0
-    ? els.displayPreview.clientWidth / 1280
+    ? els.displayPreview.clientWidth / width
     : 1;
   miniPreviewRuntime.scale = scale;
   els.displayPreview.style.setProperty("--mini-scale", String(scale));
+  if (els.miniStage) {
+    els.miniStage.style.width = `${width}px`;
+    els.miniStage.style.height = `${height}px`;
+    els.miniStage.style.transform = `scale(${scale})`;
+  }
 }
 
 async function bindDisplaySelectionListener() {
@@ -981,6 +998,7 @@ function getDisplayPayload() {
   const item = getCurrentItem();
   const block = getCurrentBlock();
   if (!item || !block) return null;
+  const displaySize = getSelectedDisplaySize();
 
   return {
     songTitle: item.title,
@@ -999,7 +1017,15 @@ function getDisplayPayload() {
     blocks: item.blocks.map((entry) => ({ role: entry.role || "", text: entry.text || "" })),
     textStyle: getTextStyle(),
     roleStyle: getRoleStyle(),
+    displaySize,
   };
+}
+
+function getSelectedDisplaySize() {
+  const monitor = state.monitors[state.selectedMonitorIndex];
+  const width = Number(monitor?.size?.width) || DEFAULT_DISPLAY_SIZE.width;
+  const height = Number(monitor?.size?.height) || DEFAULT_DISPLAY_SIZE.height;
+  return { width, height };
 }
 
 function postPreviewState() {
@@ -1049,8 +1075,14 @@ function renderMiniPreview(payload) {
     showListVisible,
     textStyle,
     roleStyle,
+    displaySize,
   } = payload;
 
+  miniPreviewRuntime.displaySize = {
+    width: Number(displaySize?.width) || DEFAULT_DISPLAY_SIZE.width,
+    height: Number(displaySize?.height) || DEFAULT_DISPLAY_SIZE.height,
+  };
+  updateMiniPreviewScale();
   miniPreviewRuntime.isPlaying = !!isPlaying;
   miniPreviewRuntime.mode = mode || "blocks";
   miniPreviewRuntime.speed = Number(speed) || 100;
@@ -1139,23 +1171,21 @@ function renderMiniBlockRail(blocks, activeIndex) {
 
 function applyMiniTextStyle(textStyle = {}) {
   if (!els.miniContentWrap) return;
-  const scale = miniPreviewRuntime.scale || 1;
   const fontSize = clampNumber(textStyle.fontSize, DEFAULT_TEXT_STYLE.fontSize, 16, 96);
   const offsetX = clampNumber(textStyle.offsetX, DEFAULT_TEXT_STYLE.offsetX, -400, 400);
   const offsetY = clampNumber(textStyle.offsetY, DEFAULT_TEXT_STYLE.offsetY, -300, 300);
-  els.miniContentWrap.style.setProperty("--mini-font-size", `${fontSize * scale}px`);
-  els.miniContentWrap.style.setProperty("--mini-offset-x", `${offsetX * scale}px`);
-  els.miniContentWrap.style.setProperty("--mini-offset-y", `${offsetY * scale}px`);
+  els.miniContentWrap.style.setProperty("--mini-font-size", `${fontSize}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-x", `${offsetX}px`);
+  els.miniContentWrap.style.setProperty("--mini-offset-y", `${offsetY}px`);
 }
 
 function applyMiniRoleStyle(roleStyle = {}) {
   if (!els.miniRole) return;
-  const scale = miniPreviewRuntime.scale || 1;
   const fontSize = clampNumber(roleStyle.fontSize, DEFAULT_ROLE_STYLE.fontSize, 18, 96);
   const offsetX = clampNumber(roleStyle.offsetX, DEFAULT_ROLE_STYLE.offsetX, -500, 500);
   const offsetY = clampNumber(roleStyle.offsetY, DEFAULT_ROLE_STYLE.offsetY, -220, 360);
-  els.miniRole.style.fontSize = `${fontSize * scale}px`;
-  els.miniRole.style.transform = `translate(calc(-50% + ${offsetX * scale}px), ${offsetY * scale}px)`;
+  els.miniRole.style.fontSize = `${fontSize}px`;
+  els.miniRole.style.transform = `translate(calc(-50% + ${offsetX}px), ${offsetY}px)`;
 }
 
 function renderMiniScrollBlocks(blocks) {
@@ -1166,14 +1196,14 @@ function renderMiniScrollBlocks(blocks) {
         <div>${escapeHtml(block.text || "")}</div>
       </section>
     `)
-    .join("");
+    .join('<div class="mini-separator"></div>');
 }
 
 function startMiniPreviewScroll(direction = "up") {
   clearMiniPreviewScroll();
   const tick = () => {
     const maxScroll = getMiniMaxScroll();
-    const step = Math.max(0.15, miniPreviewRuntime.speed / 100) * 0.7;
+    const step = Math.max(0.18, miniPreviewRuntime.speed / 120);
     miniPreviewRuntime.scrollPos += direction === "down" ? -step : step;
     miniPreviewRuntime.scrollPos = Math.max(0, Math.min(maxScroll, miniPreviewRuntime.scrollPos));
     updateMiniTransform();

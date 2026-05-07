@@ -547,6 +547,138 @@ label {
   opacity: 1;
 }
 
+.mini-stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: left top;
+  z-index: 1;
+}
+
+.display-preview-mini::after {
+  z-index: 0;
+}
+
+.display-preview-mini .mini-top {
+  inset: 14px 24px auto 24px;
+  min-height: 58px;
+}
+
+.display-preview-mini .mini-song-title {
+  max-width: 430px;
+  font-size: 38px;
+}
+
+.display-preview-mini .mini-role {
+  top: 26px;
+  max-width: 760px;
+  font-size: 52px;
+}
+
+.display-preview-mini .mini-show-list {
+  top: 86px;
+  left: 24px;
+  bottom: 68px;
+  width: 232px;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.display-preview-mini .mini-show-item {
+  border-radius: 12px;
+  font-size: 18px;
+  line-height: 1.25;
+  padding: 10px 12px;
+}
+
+.display-preview-mini .mini-block-rail {
+  top: 86px;
+  right: 24px;
+  bottom: 68px;
+  width: 160px;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.display-preview-mini .mini-rail-title {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.display-preview-mini .mini-rail-block {
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  min-height: 54px;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.display-preview-mini .mini-rail-index {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.display-preview-mini .mini-rail-text {
+  gap: 3px;
+}
+
+.display-preview-mini .mini-rail-text strong {
+  font-size: 11px;
+}
+
+.display-preview-mini .mini-rail-text span {
+  font-size: 10px;
+  line-height: 1.25;
+  max-height: 38px;
+}
+
+.display-preview-mini .mini-content-wrap {
+  top: 154px;
+  left: 24px;
+  right: 24px;
+  bottom: 78px;
+  transform: translate(var(--mini-offset-x, 0px), var(--mini-offset-y, 0px));
+}
+
+.display-preview-mini .mini-content-wrap.has-show-list {
+  left: 288px;
+}
+
+.display-preview-mini .mini-content-wrap.has-block-rail {
+  right: 208px;
+}
+
+.display-preview-mini .mini-content {
+  font-size: var(--mini-font-size, 42px);
+  line-height: 1.34;
+  font-weight: 700;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.58);
+}
+
+.display-preview-mini .mini-scroll-block {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.display-preview-mini .mini-separator {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 16px 0;
+}
+
+.display-preview-mini .mini-overlay {
+  bottom: 28px;
+  padding: 10px 16px;
+  font-size: 22px;
+}
+
 .block-list {
   display: flex;
   flex-direction: column;
