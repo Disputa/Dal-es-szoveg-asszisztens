@@ -1,12 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "EmlékSúgó 2.0_FIX build-ready jogosultságok. Dialog/fs plugin permission nincs itt; a mentés natív Rust paranccsal történik.",
+  "description": "Szigligeti DSZA pilot jogosultsagok.",
   "windows": [
     "main",
     "display",
-    "emlek-sugo-display",
-    "emlek-sugo-help"
+    "szigligeti-dsza-display",
+    "szigligeti-dsza-help"
   ],
   "permissions": [
     "core:default",

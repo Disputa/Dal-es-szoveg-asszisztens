@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EmlékSúgó</title>
+    <title>Szigligeti DSZA 0.1.0.Pilot</title>
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
     <div id="splashScreen" class="splash-screen" style="background-image: linear-gradient(rgba(4,6,20,0.25), rgba(4,6,20,0.6)), url('/nyitokep.png'); background-size: cover; background-position: center center; background-repeat: no-repeat;">
       <div class="splash-card" id="splashCard">
-        <h1>EmlékSúgó</h1>
-        <p>koncert-súgó rendszer</p>
+        <h1>Szigligeti DSZA</h1>
+        <p>dal- és szöveg asszisztens</p>
         <div class="credit-box credit-box-center">
           created by: Deme Gábor © 2026<br />
-          only use for Szolnoki Szigligeti Theater
+          Szigligeti pilot program
         </div>
         <button id="enterAppBtn" type="button">Indítás most</button>
       </div>
@@ -27,10 +27,10 @@
       </div>
 
       <aside class="sidebar">
-        <h1>EmlékSúgó</h1>
+        <h1>Szigligeti DSZA</h1>
         <div class="credit-box">
           created by: Deme Gábor © 2026<br />
-          only use for Szolnoki Szigligeti Theater
+          Szigligeti pilot program
         </div>
 
         <section class="panel">
@@ -95,7 +95,7 @@
 
           <input id="showlistInput" type="file" accept=".txt,.docx" hidden />
           <input id="lyricsInput" type="file" accept=".txt,.docx" hidden />
-          <input id="projectInput" type="file" accept=".esp,.json,.emleksugo.project.json,application/json" hidden />
+          <input id="projectInput" type="file" accept=".dsa,.esp,.json,.emleksugo.project.json,application/json" hidden />
 
           <div id="importStatus" class="import-status">
             Műsorrend: nincs betöltve<br />
@@ -105,13 +105,12 @@
           </div>
         </section>
 
-
         <section class="panel preview-panel" id="previewPanel">
           <div class="preview-header">
             <div id="previewTitle" class="preview-title">-</div>
             <div id="previewRole" class="preview-role"></div>
           </div>
-          <div id="displayPreview" class="display-preview-mini" aria-label="Display2 elo elonezet">
+          <div id="displayPreview" class="display-preview-mini" aria-label="Display2 élő előnézet">
             <div id="miniStage" class="mini-stage">
               <div class="mini-top">
                 <div id="miniSongTitle" class="mini-song-title"></div>
@@ -177,10 +176,9 @@
         </section>
 
         <footer class="app-footer">
-          EmlékSúgó — created by: Deme Gábor © 2026 — only use for Szolnoki Szigligeti Theater
+          Szigligeti DSZA 0.1.0.Pilot — created by: Deme Gábor © 2026 — Szigligeti pilot program
         </footer>
       </main>
     </div>
-
-</body>
+  </body>
 </html>

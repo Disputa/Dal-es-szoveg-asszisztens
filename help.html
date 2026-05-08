@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EmlékSúgó Súgó</title>
+    <title>Szigligeti DSZA Súgó</title>
     <style>
       :root {
         color-scheme: dark;
@@ -83,8 +83,8 @@
   <body>
     <header>
       <div>
-        <h1>EmlékSúgó 2.5.0 Súgó</h1>
-        <div class="muted">Koncert-súgó rendszer, created by: Deme Gábor © 2026</div>
+        <h1>Szigligeti DSZA 0.1.0.Pilot Súgó</h1>
+        <div class="muted">Dal- és szöveg asszisztens, created by: Deme Gábor © 2026</div>
       </div>
       <a href="/help/EmlekSugo_2_5_0_Gyors_Sugo.pdf" target="_blank" rel="noreferrer">PDF megnyitása</a>
     </header>
@@ -96,7 +96,7 @@
             <li>Műsorrend betöltése: <code>.txt</code> vagy <code>.docx</code> fájlból.</li>
             <li>Szövegkönyv betöltése: <code>.txt</code> vagy <code>.docx</code> fájlból.</li>
             <li>Kijelző kiválasztása után a <span class="accent">Kijelző nyitása</span> gomb küldi ki a Display2 ablakot.</li>
-            <li>A projektet <code>.esp</code> fájlba érdemes menteni, így később visszatölthető.</li>
+            <li>A projektet <code>.dsa</code> fájlba érdemes menteni. A régi <code>.esp</code> és JSON projektfájlok továbbra is megnyithatók.</li>
           </ul>
           <h3>Súgó elérése</h3>
           <ul>
@@ -131,7 +131,7 @@
             <li><span class="accent">Display2 vízszintes/függőleges eltolás</span>: a fő felirat helyzetét finomhangolja.</li>
             <li><span class="accent">Megszólaló név mérete</span>: az énekes/szereplő nevének betűméretét állítja.</li>
             <li><span class="accent">Megszólaló név vízszintes/függőleges pozíciója</span>: a nevet a középre igazított alaphelyzethez képest mozgatja.</li>
-            <li>A fenti beállítások a projekt mentésekor az <code>.esp</code> fájlba is bekerülnek.</li>
+            <li>A fenti beállítások a projekt mentésekor a <code>.dsa</code> projektfájlba is bekerülnek.</li>
           </ul>
         </section>
 
@@ -145,13 +145,13 @@
         </section>
 
         <section>
-          <h2>2.5.0 Újdonságok</h2>
+          <h2>0.1.0.Pilot alap</h2>
           <ul>
-            <li>Élő Display2 előnézet a főablakban: háttérképpel, műsorlistával, blokk-sávval és szinkronizált scroll sebességgel.</li>
-            <li>Háttérképes Display2 megjelenés és blokk-sáv.</li>
-            <li>A megszólaló neve középre került, és külön állítható a mérete, vízszintes pozíciója és függőleges pozíciója.</li>
-            <li>Mindkét kijelzőn saját ablakgombok: tálcára rejtés, ablak/teljes képernyő, bezárás.</li>
-            <li>Robusztusabb Display2 szinkron: az aktuális blokk és a lejátszási állapot az ablak megnyitásakor is frissül.</li>
+            <li>Új terméknév: Szigligeti Dal- és Szöveg Asszisztens, röviden Szigligeti DSZA.</li>
+            <li>Új alap projektkiterjesztés: <code>.dsa</code>.</li>
+            <li>Kompatibilis megnyitás: <code>.esp</code> és JSON-alapú projektfájlok.</li>
+            <li>Első strukturális alap: külön app metaadat, projektmodell-normalizálás és Display payload építés.</li>
+            <li>GitHub Actions desktop build: Windows installer, macOS Intel DMG és macOS Apple Silicon DMG.</li>
           </ul>
         </section>
       </div>
@@ -160,7 +160,7 @@
           <h2>Beépített gyors súgó PDF</h2>
           <div class="muted">A korábbi gyors súgó beépített referenciaként elérhető.</div>
         </div>
-        <iframe src="/help/EmlekSugo_2_5_0_Gyors_Sugo.pdf" title="EmlékSúgó gyors súgó PDF"></iframe>
+        <iframe src="/help/EmlekSugo_2_5_0_Gyors_Sugo.pdf" title="Szigligeti DSZA gyors súgó PDF"></iframe>
       </div>
     </main>
   </body>

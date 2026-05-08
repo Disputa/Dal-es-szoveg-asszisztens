@@ -1,7 +1,7 @@
 {
-  "name": "emlek-sugo",
+  "name": "szigligeti-dsza",
   "private": true,
-  "version": "2.5.4",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

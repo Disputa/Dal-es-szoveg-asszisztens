@@ -5,17 +5,18 @@ use tauri::Window;
 pub fn es_save_project_as(defaultFilename: String, contents: String) -> Result<Option<String>, String> {
     let mut default_name = defaultFilename.trim().to_string();
     if default_name.is_empty() {
-        default_name = "EmlékSúgó.esp".to_string();
+        default_name = "Szigligeti_DSZA.dsa".to_string();
     }
 
     let lower = default_name.to_lowercase();
-    if !lower.ends_with(".esp") && !lower.ends_with(".json") {
-        default_name.push_str(".esp");
+    if !lower.ends_with(".dsa") && !lower.ends_with(".esp") && !lower.ends_with(".json") {
+        default_name.push_str(".dsa");
     }
 
     let picked = rfd::FileDialog::new()
-        .set_title("EmlékSúgó projekt mentése")
-        .add_filter("EmlékSúgó Projekt", &["esp"])
+        .set_title("Szigligeti DSZA projekt mentése")
+        .add_filter("Szigligeti DSZA Projekt", &["dsa"])
+        .add_filter("Régi EmlékSúgó Projekt", &["esp"])
         .add_filter("JSON", &["json"])
         .set_file_name(&default_name)
         .save_file();
@@ -25,7 +26,7 @@ pub fn es_save_project_as(defaultFilename: String, contents: String) -> Result<O
     };
 
     if path.extension().is_none() {
-        path.set_extension("esp");
+        path.set_extension("dsa");
     }
 
     std::fs::write(&path, contents)

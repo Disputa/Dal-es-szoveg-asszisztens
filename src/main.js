@@ -12,8 +12,17 @@ import {
 } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit, emitTo, listen } from "@tauri-apps/api/event";
+import {
+  APP_FILE_PREFIX,
+  APP_NAME,
+  APP_PROJECT_EXTENSION,
+  APP_RELEASE_LABEL,
+  APP_SHORT_NAME,
+} from "./core/appInfo.js";
+import { buildDisplayPayload } from "./core/displayPayload.js";
+import { createProject, normalizeProject } from "./core/projectModel.js";
 
-const DISPLAY_LABEL = "emlek-sugo-display";
+const DISPLAY_LABEL = "szigligeti-dsza-display";
 
 const DEFAULT_TEXT_STYLE = {
   fontSize: 42,
@@ -32,11 +41,7 @@ const DEFAULT_DISPLAY_SIZE = {
   height: 720,
 };
 
-const project = {
-  title: "EmlékSúgó",
-  playbackMode: "blocks",
-  items: [],
-};
+const project = createProject({ title: APP_SHORT_NAME });
 
 const sources = {
   showlistItems: [],
@@ -411,7 +416,7 @@ function bindUi() {
     updatePreviewPayload();
   });
   window.addEventListener("message", (event) => {
-    if (event.data?.source !== "emleksugo-display-preview") return;
+    if (event.data?.source !== "szigligeti-dsza-display-preview") return;
     if (event.data.type === "display:ready") {
       resizePreviewFrame();
       updatePreviewPayload();
@@ -505,11 +510,11 @@ async function invokeWindowCommand(command) {
 
 async function openHelpWindow() {
   try {
-    let helpWindow = await WebviewWindow.getByLabel("emlek-sugo-help");
+    let helpWindow = await WebviewWindow.getByLabel("szigligeti-dsza-help");
     if (!helpWindow) {
-      helpWindow = new WebviewWindow("emlek-sugo-help", {
+      helpWindow = new WebviewWindow("szigligeti-dsza-help", {
         url: "help.html",
-        title: "EmlékSúgó Súgó",
+        title: `${APP_SHORT_NAME} Súgó`,
         decorations: true,
         focus: true,
         visible: true,
@@ -924,7 +929,7 @@ async function ensureDisplayWindow() {
 
   displayWindow = new WebviewWindow(DISPLAY_LABEL, {
     url: "display.html",
-    title: "EmlékSúgó Display",
+    title: `${APP_SHORT_NAME} Display`,
     decorations: true,
     focus: true,
     visible: true,
@@ -1006,25 +1011,16 @@ function getDisplayPayload() {
   if (!item || !block) return null;
   const displaySize = getSelectedDisplaySize();
 
-  return {
-    songTitle: item.title,
-    role: block.role || "",
-    text: block.text || "",
-    fullText: buildFullTextForItem(item),
-    mode: project.playbackMode,
-    black: state.black,
-    speed: state.speed,
-    isPlaying: state.isPlaying,
-    blockIndex: state.blockIndex + 1,
-    blockCount: item.blocks.length,
-    showListVisible: uiPrefs.showListDisplay,
-    showListTitles: project.items.map((it) => it.title),
-    currentItemIndex: state.itemIndex,
-    blocks: item.blocks.map((entry) => ({ role: entry.role || "", text: entry.text || "" })),
+  return buildDisplayPayload({
+    project,
+    item,
+    block,
+    state,
+    uiPrefs,
     textStyle: getTextStyle(),
     roleStyle: getRoleStyle(),
     displaySize,
-  };
+  });
 }
 
 function getSelectedDisplaySize() {
@@ -1037,7 +1033,7 @@ function getSelectedDisplaySize() {
 function postPreviewState() {
   if (!els.displayPreviewFrame?.contentWindow || !lastDisplayPayload) return;
   els.displayPreviewFrame.contentWindow.postMessage({
-    source: "emleksugo-main",
+    source: "szigligeti-dsza-main",
     type: "display:block",
     payload: lastDisplayPayload,
   }, "*");
@@ -1054,7 +1050,7 @@ function updatePreviewPayload() {
 function postPreviewOverlay(text) {
   if (!els.displayPreviewFrame?.contentWindow) return;
   els.displayPreviewFrame.contentWindow.postMessage({
-    source: "emleksugo-main",
+    source: "szigligeti-dsza-main",
     type: "display:overlay",
     payload: { text },
   }, "*");
@@ -1607,8 +1603,10 @@ function getPlaybackModeLabel(mode) {
 
 async function saveProjectToFile() {
   const payload = {
-    app: "EmlékSúgó",
-    version: "2.5.0",
+    app: APP_NAME,
+    shortName: APP_SHORT_NAME,
+    version: APP_RELEASE_LABEL,
+    schemaVersion: 1,
     savedAt: new Date().toISOString(),
     project: structuredClone(project),
     sources: structuredClone(sources),
@@ -1620,7 +1618,7 @@ async function saveProjectToFile() {
     },
   };
 
-  const fileName = `emleksugo_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.esp`;
+  const fileName = `${APP_FILE_PREFIX}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${APP_PROJECT_EXTENSION}`;
   const contents = JSON.stringify(payload, null, 2);
 
   try {
@@ -1652,9 +1650,10 @@ async function saveProjectToFile() {
 }
 
 function loadProjectFromObject(data) {
-  project.title = data.project?.title || "EmlékSúgó";
-  project.items = Array.isArray(data.project?.items) ? data.project.items : [];
-  project.playbackMode = data.project?.playbackMode || "blocks";
+  const normalizedProject = normalizeProject(data.project);
+  project.title = normalizedProject.title || APP_SHORT_NAME;
+  project.items = normalizedProject.items;
+  project.playbackMode = normalizedProject.playbackMode;
   sources.showlistItems = Array.isArray(data.sources?.showlistItems) ? data.sources.showlistItems : [];
   sources.lyricSongs = Array.isArray(data.sources?.lyricSongs) ? data.sources.lyricSongs : [];
   sources.showlistFileName = data.sources?.showlistFileName || "";

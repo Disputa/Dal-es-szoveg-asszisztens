@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "EmlékSúgó",
-  "version": "2.5.4",
-  "identifier": "com.demegabor.emleksugo",
+  "productName": "Szigligeti Dal- és Szöveg Asszisztens",
+  "version": "0.1.0",
+  "identifier": "com.demegabor.szigligeti.dsza",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "EmlékSúgó",
+        "title": "Szigligeti DSZA 0.1.0.Pilot",
         "width": 1600,
         "height": 900,
         "resizable": true,

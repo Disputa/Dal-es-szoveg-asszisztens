@@ -385,7 +385,7 @@ if (!isPreview) {
 }
 
 window.addEventListener("message", (event) => {
-  if (event.data?.source !== "emleksugo-main") return;
+  if (event.data?.source !== "szigligeti-dsza-main") return;
   if (event.data.type === "display:block") {
     renderState(event.data.payload || {});
   }
@@ -400,7 +400,7 @@ els.displayCloseBtn?.addEventListener("click", () => invokeWindowCommand("es_win
 
 if (isPreview) {
   window.parent?.postMessage({
-    source: "emleksugo-display-preview",
+    source: "szigligeti-dsza-display-preview",
     type: "display:ready",
   }, "*");
 }
