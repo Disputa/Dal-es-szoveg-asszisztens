@@ -2,7 +2,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import "./display.css";
-import splashImage from "./nyitokep.png";
+import defaultLogoImage from "./assets/szigligeti-logo-feher.png";
+import { DEFAULT_DISPLAY_BACKGROUND, applyDisplayBackgroundToElement } from "./core/displayBackgrounds.js";
 import { DISPLAY_PROFILE_CLASS_NAMES } from "./core/displayProfiles.js";
 import { buildDisplayRenderModel, escapeHtml } from "./core/displayRenderRules.js";
 
@@ -24,7 +25,7 @@ const els = {
 };
 
 if (els.app) {
-  els.app.style.setProperty("--display-bg-image", `url("${splashImage}")`);
+  applyDisplayBackgroundToElement(els.app, DEFAULT_DISPLAY_BACKGROUND, { logoImageUrl: defaultLogoImage });
   els.app.classList.toggle("preview-mode", isPreview);
 }
 
@@ -319,6 +320,8 @@ function renderState(payload) {
   };
 
   applyDisplayProfileClass(renderModel.className);
+  applyDisplayBackgroundToElement(els.app, renderModel.displayBackground, { logoImageUrl: defaultLogoImage });
+  els.app?.classList.toggle("is-black", !!black);
   els.songTitle.textContent = renderModel.showSongTitle ? (songTitle || "") : "";
   els.songTitle.style.display = renderModel.showSongTitle ? "" : "none";
   els.role.textContent = renderModel.showRole ? (runtime.mode === "blocks" ? (role || "") : (runtime.activeRole || "")) : "";

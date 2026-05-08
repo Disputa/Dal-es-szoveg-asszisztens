@@ -1,7 +1,6 @@
 
-import JSZip from "jszip";
 import "./style.css";
-import splashImage from "./nyitokep.png";
+import defaultLogoImage from "./assets/szigligeti-logo-feher.png";
 import { invoke } from "@tauri-apps/api/core";
 import {
   availableMonitors,
@@ -19,6 +18,14 @@ import {
   APP_RELEASE_LABEL,
   APP_SHORT_NAME,
 } from "./core/appInfo.js";
+import {
+  DEFAULT_DISPLAY_BACKGROUND,
+  applyDisplayBackgroundToElement,
+  getDisplayBackgroundColorId,
+  getDisplayBackgroundColorOptions,
+  getDisplayBackgroundColorValue,
+  normalizeDisplayBackground,
+} from "./core/displayBackgrounds.js";
 import { buildDisplayPayload } from "./core/displayPayload.js";
 import {
   DEFAULT_DISPLAY_PROFILE_ID,
@@ -29,9 +36,16 @@ import {
 } from "./core/displayProfiles.js";
 import { buildDisplayRenderModel } from "./core/displayRenderRules.js";
 import { createProject, normalizeProject } from "./core/projectModel.js";
+import {
+  SUPPORTED_IMPORT_ACCEPT,
+  normalizeImportedText,
+  readImportedText,
+  readImportedTextFromNativeResult,
+} from "./core/textImporters.js";
 
 const DISPLAY_LABEL = "szigligeti-dsza-display";
 const DEFAULT_DISPLAY_PROFILE = getDisplayProfile(DEFAULT_DISPLAY_PROFILE_ID);
+const LOGO_BACKGROUND_OPTIONS = { logoImageUrl: defaultLogoImage };
 
 const DEFAULT_TEXT_STYLE = {
   ...DEFAULT_DISPLAY_PROFILE.textStyle,
@@ -63,6 +77,7 @@ const uiPrefs = {
   openedProjectFileName: "",
   textStyle: { ...DEFAULT_TEXT_STYLE },
   roleStyle: { ...DEFAULT_ROLE_STYLE },
+  displayBackground: { ...DEFAULT_DISPLAY_BACKGROUND },
 };
 
 const state = {
@@ -96,6 +111,12 @@ const els = {
   playbackModeSelect: document.getElementById("playbackModeSelect"),
   displayProfileSelect: document.getElementById("displayProfileSelect"),
   displayProfileHint: document.getElementById("displayProfileHint"),
+  displayBackgroundModeSelect: document.getElementById("displayBackgroundModeSelect"),
+  displayBackgroundColorSelect: document.getElementById("displayBackgroundColorSelect"),
+  displayBackgroundCustomColorInput: document.getElementById("displayBackgroundCustomColorInput"),
+  loadBackgroundImageBtn: document.getElementById("loadBackgroundImageBtn"),
+  backgroundImageInput: document.getElementById("backgroundImageInput"),
+  backgroundImageName: document.getElementById("backgroundImageName"),
   speedRange: document.getElementById("speedRange"),
   speedValue: document.getElementById("speedValue"),
   fontSizeRange: document.getElementById("fontSizeRange"),
@@ -228,6 +249,13 @@ function renderDisplayProfileOptions() {
     .join("");
 }
 
+function renderDisplayBackgroundOptions() {
+  if (!els.displayBackgroundColorSelect) return;
+  els.displayBackgroundColorSelect.innerHTML = getDisplayBackgroundColorOptions()
+    .map((entry) => `<option value="${entry.id}">${escapeHtml(entry.label)}</option>`)
+    .join("");
+}
+
 async function setDisplayProfile(profileId, { applyDefaults = true } = {}) {
   const profile = getDisplayProfile(profileId);
   uiPrefs.displayProfileId = profile.id;
@@ -248,8 +276,9 @@ async function setDisplayProfile(profileId, { applyDefaults = true } = {}) {
 init().catch(console.error);
 
 async function init() {
+  setupImportAccepts();
   if (els.displayPreview) {
-    els.displayPreview.style.setProperty("--display-bg-image", `url("${splashImage}")`);
+    applyDisplayBackgroundToElement(els.displayPreview, uiPrefs.displayBackground, LOGO_BACKGROUND_OPTIONS);
     updateMiniPreviewScale();
     if ("ResizeObserver" in window) {
       new ResizeObserver(() => {
@@ -260,6 +289,7 @@ async function init() {
   }
   setupSplash();
   renderDisplayProfileOptions();
+  renderDisplayBackgroundOptions();
   bindUi();
   await bindDisplaySelectionListener();
   await loadMonitors();
@@ -277,11 +307,13 @@ async function init() {
 function setupSplash() {
   if (!els.splashScreen) return;
 
-  els.splashScreen.style.backgroundImage =
-    `linear-gradient(rgba(4,6,20,0.25), rgba(4,6,20,0.6)), url('${splashImage}')`;
-  els.splashScreen.style.backgroundSize = "cover";
-  els.splashScreen.style.backgroundPosition = "center center";
-  els.splashScreen.style.backgroundRepeat = "no-repeat";
+  els.splashScreen.classList.add("splash-screen-logo");
+  els.splashScreen.style.setProperty("--splash-logo-image", `url("${defaultLogoImage}")`);
+}
+
+function setupImportAccepts() {
+  if (els.showlistInput) els.showlistInput.accept = SUPPORTED_IMPORT_ACCEPT;
+  if (els.lyricsInput) els.lyricsInput.accept = SUPPORTED_IMPORT_ACCEPT;
 }
 
 function revealMainApp() {
@@ -299,8 +331,8 @@ function bindUi() {
     await ensureMainFullscreen();
   });
 
-  els.loadShowlistBtn?.addEventListener("click", () => els.showlistInput?.click());
-  els.loadLyricsBtn?.addEventListener("click", () => els.lyricsInput?.click());
+  els.loadShowlistBtn?.addEventListener("click", () => pickAndImportText("showlist"));
+  els.loadLyricsBtn?.addEventListener("click", () => pickAndImportText("lyrics"));
   els.saveProjectBtn?.addEventListener("click", () => saveProjectToFile());
   els.openProjectBtn?.addEventListener("click", () => els.projectInput?.click());
   els.openHelpBtn?.addEventListener("click", () => openHelpWindow());
@@ -313,14 +345,10 @@ function bindUi() {
     if (!file) return;
     try {
       const text = await readImportedText(file);
-      sources.showlistItems = parseShowlistText(text);
-      sources.showlistFileName = file.name;
-      rebuildProjectFromSources();
-      updateImportStatus();
-      await flashOverlay(`Műsorrend betöltve: ${sources.showlistItems.length} tétel`);
+      await applyImportedText("showlist", text, file.name);
     } catch (err) {
       console.error(err);
-      alert("A műsorrend fájl nem olvasható be.");
+      alert(`A műsorrend fájl nem olvasható be.\n\n${err.message || err}`);
     }
     e.target.value = "";
   });
@@ -330,14 +358,10 @@ function bindUi() {
     if (!file) return;
     try {
       const text = await readImportedText(file);
-      sources.lyricSongs = parseLyricsBookText(text);
-      sources.lyricsFileName = file.name;
-      rebuildProjectFromSources();
-      updateImportStatus();
-      await flashOverlay(`Szövegkönyv betöltve: ${sources.lyricSongs.length} dal`);
+      await applyImportedText("lyrics", text, file.name);
     } catch (err) {
       console.error(err);
-      alert("A szövegkönyv fájl nem olvasható be.");
+      alert(`A szövegkönyv fájl nem olvasható be.\n\n${err.message || err}`);
     }
     e.target.value = "";
   });
@@ -371,6 +395,61 @@ function bindUi() {
 
   els.displayProfileSelect?.addEventListener("change", async (e) => {
     await setDisplayProfile(e.target.value);
+  });
+
+  els.displayBackgroundModeSelect?.addEventListener("change", async (e) => {
+    uiPrefs.displayBackground = normalizeDisplayBackground({
+      ...uiPrefs.displayBackground,
+      mode: e.target.value,
+    });
+    syncControlValuesFromState();
+    renderPreview();
+    await syncDisplay();
+  });
+
+  els.displayBackgroundColorSelect?.addEventListener("change", async (e) => {
+    const color = getDisplayBackgroundColorValue(e.target.value, uiPrefs.displayBackground?.color);
+    uiPrefs.displayBackground = normalizeDisplayBackground({
+      ...uiPrefs.displayBackground,
+      mode: "color",
+      color,
+    });
+    syncControlValuesFromState();
+    renderPreview();
+    await syncDisplay();
+  });
+
+  els.displayBackgroundCustomColorInput?.addEventListener("input", async (e) => {
+    uiPrefs.displayBackground = normalizeDisplayBackground({
+      ...uiPrefs.displayBackground,
+      mode: "color",
+      color: e.target.value,
+    });
+    syncControlValuesFromState();
+    renderPreview();
+    await syncDisplay();
+  });
+
+  els.loadBackgroundImageBtn?.addEventListener("click", () => els.backgroundImageInput?.click());
+  els.backgroundImageInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      uiPrefs.displayBackground = normalizeDisplayBackground({
+        ...uiPrefs.displayBackground,
+        mode: "image",
+        imageDataUrl: await readFileAsDataUrl(file),
+        imageName: file.name,
+      });
+      syncControlValuesFromState();
+      renderPreview();
+      await syncDisplay();
+      await flashOverlay("Háttérkép betöltve");
+    } catch (err) {
+      console.error(err);
+      alert(`A háttérkép nem olvasható be.\n\n${err.message || err}`);
+    }
+    e.target.value = "";
   });
 
   els.speedRange?.addEventListener("input", async (e) => {
@@ -539,6 +618,59 @@ function bindUi() {
   });
 }
 
+async function pickAndImportText(kind) {
+  const fallbackInput = kind === "showlist" ? els.showlistInput : els.lyricsInput;
+  try {
+    const result = await invoke("es_pick_import_file");
+    if (!result) return;
+    const text = await readImportedTextFromNativeResult(result);
+    await applyImportedText(kind, text, result.fileName || "");
+  } catch (err) {
+    console.error(err);
+    if (isNativeImportUnavailable(err)) {
+      fallbackInput?.click();
+      return;
+    }
+
+    const label = kind === "showlist" ? "műsorrend" : "szövegkönyv";
+    alert(`A ${label} fájl nem olvasható be.\n\n${err.message || err}`);
+  }
+}
+
+async function applyImportedText(kind, text, fileName) {
+  if (kind === "showlist") {
+    sources.showlistItems = parseShowlistText(text);
+    sources.showlistFileName = fileName || "import";
+    rebuildProjectFromSources();
+    updateImportStatus();
+    await flashOverlay(`Műsorrend betöltve: ${sources.showlistItems.length} tétel`);
+    return;
+  }
+
+  sources.lyricSongs = parseLyricsBookText(text);
+  sources.lyricsFileName = fileName || "import";
+  rebuildProjectFromSources();
+  updateImportStatus();
+  await flashOverlay(`Szövegkönyv betöltve: ${sources.lyricSongs.length} dal`);
+}
+
+function isNativeImportUnavailable(err) {
+  const message = String(err?.message || err || "").toLowerCase();
+  return message.includes("unknown command")
+    || message.includes("not allowed")
+    || message.includes("__tauri")
+    || message.includes("tauri");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Nem olvasható fájl."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function bindTextStyleControl(element, key) {
   element?.addEventListener("input", async (e) => {
     await updateTextStyleAndSync(key, e.target.value);
@@ -687,9 +819,25 @@ function syncControlValuesFromState() {
   const textStyle = getTextStyle();
   const roleStyle = getRoleStyle();
   const displayProfile = getCurrentDisplayProfile();
+  const displayBackground = normalizeDisplayBackground(uiPrefs.displayBackground);
+  uiPrefs.displayBackground = displayBackground;
   if (els.playbackModeSelect) els.playbackModeSelect.value = project.playbackMode;
   if (els.displayProfileSelect) els.displayProfileSelect.value = displayProfile.id;
   if (els.displayProfileHint) els.displayProfileHint.textContent = displayProfile.description || "";
+  if (els.displayBackgroundModeSelect) els.displayBackgroundModeSelect.value = displayBackground.mode;
+  if (els.displayBackgroundColorSelect) {
+    els.displayBackgroundColorSelect.value = getDisplayBackgroundColorId(displayBackground.color);
+  }
+  if (els.displayBackgroundCustomColorInput) {
+    els.displayBackgroundCustomColorInput.value = displayBackground.color;
+  }
+  if (els.backgroundImageName) {
+    els.backgroundImageName.textContent = displayBackground.mode === "image" && displayBackground.imageName
+      ? displayBackground.imageName
+      : displayBackground.mode === "color"
+        ? "Homogén Display2 háttér"
+        : "Alapértelmezett Szigligeti háttér";
+  }
   if (els.speedRange) els.speedRange.value = String(state.speed);
   if (els.speedValue) els.speedValue.textContent = `${state.speed}%`;
   if (els.fontSizeRange) els.fontSizeRange.value = String(textStyle.fontSize);
@@ -1121,6 +1269,7 @@ function renderMiniPreview(payload) {
   updateMiniPreviewScale();
   const renderModel = buildDisplayRenderModel(payload);
   applyMiniDisplayProfileClass(renderModel.className);
+  applyDisplayBackgroundToElement(els.displayPreview, renderModel.displayBackground, LOGO_BACKGROUND_OPTIONS);
   const previousBlockIndex = miniPreviewRuntime.blockIndex || 1;
 
   const {
@@ -1346,41 +1495,6 @@ function setMiniOverlay(text) {
 function buildFullTextForItem(item) {
   if (!item) return "";
   return item.blocks.map((block) => block.text || "").join("\n\n");
-}
-
-async function readImportedText(file) {
-  const lower = file.name.toLowerCase();
-  if (lower.endsWith(".txt")) return normalizeImportedText(await file.text());
-  if (lower.endsWith(".docx")) return await readDocxText(file);
-  throw new Error("Csak .txt és .docx támogatott.");
-}
-
-async function readDocxText(file) {
-  const zip = await JSZip.loadAsync(await file.arrayBuffer());
-  const entry = zip.file("word/document.xml");
-  if (!entry) throw new Error("A DOCX-ben nincs document.xml");
-  const xml = await entry.async("string");
-  const doc = new DOMParser().parseFromString(xml, "application/xml");
-  const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-  const paragraphs = Array.from(doc.getElementsByTagNameNS(ns, "p"));
-  const lines = paragraphs.map((p) =>
-    Array.from(p.getElementsByTagNameNS(ns, "t"))
-      .map((t) => t.textContent || "")
-      .join("")
-      .replace(/\u00a0/g, " ")
-      .trimRight()
-  );
-  return normalizeImportedText(lines.join("\n"));
-}
-
-function normalizeImportedText(text) {
-  return String(text || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/\t/g, " ")
-    .replace(/\r/g, "")
-    .replace(/[ ]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function parseShowlistText(text) {
@@ -1746,6 +1860,7 @@ function loadProjectFromObject(data) {
     ...loadedProfile.roleStyle,
     ...(data.uiPrefs?.roleStyle || {}),
   };
+  uiPrefs.displayBackground = normalizeDisplayBackground(data.uiPrefs?.displayBackground);
   state.speed = clampNumber(data.uiState?.speed, 100, 0, 200);
   state.itemIndex = clampNumber(data.uiState?.itemIndex, 0, 0, Math.max(project.items.length - 1, 0));
   const item = getCurrentItem();

@@ -17,14 +17,32 @@ body {
 #app {
   position: fixed;
   inset: 0;
+  --display-bg-color: #000;
+  --display-bg-image: none;
   background:
     linear-gradient(rgba(8, 8, 18, 0.28), rgba(0, 0, 0, 0.34)),
     var(--display-bg-image),
-    #000;
+    var(--display-bg-color);
   background-size: cover;
   background-position: center;
   color: #fff;
   overflow: hidden;
+}
+
+#app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#app.display-background-logo::before {
+  background-image: var(--display-logo-image);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(70vw, 980px) auto;
+  opacity: 0.72;
 }
 
 #app::after {
@@ -308,7 +326,7 @@ body {
   background:
     linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.46)),
     var(--display-bg-image),
-    #000;
+    var(--display-bg-color);
 }
 
 #app.display-profile-stage-monitor #content {
@@ -317,7 +335,10 @@ body {
 }
 
 #app.display-profile-audience-subtitle {
-  background: #000;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.42)),
+    var(--display-bg-image),
+    var(--display-bg-color);
 }
 
 #app.display-profile-audience-subtitle::after,
@@ -349,7 +370,10 @@ body {
 }
 
 #app.display-profile-accessibility {
-  background: #000;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.42)),
+    var(--display-bg-image),
+    var(--display-bg-color);
 }
 
 #app.display-profile-accessibility #content {
@@ -368,7 +392,7 @@ body {
   background:
     linear-gradient(rgba(4, 8, 16, 0.34), rgba(0, 0, 0, 0.42)),
     var(--display-bg-image),
-    #070b12;
+    var(--display-bg-color);
 }
 
 #app.display-profile-rehearsal #content {
@@ -447,4 +471,13 @@ body {
   width: 140px;
   accent-color: rgba(255,255,255,0.85);
   cursor: pointer;
+}
+
+#app.is-black {
+  background: #000 !important;
+}
+
+#app.is-black::before,
+#app.is-black::after {
+  display: none !important;
 }

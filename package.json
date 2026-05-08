@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node scripts/verify-display-profiles.mjs",
+    "test": "node scripts/verify-display-profiles.mjs && node scripts/verify-importers.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev"
   },

@@ -7,7 +7,7 @@
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <div id="splashScreen" class="splash-screen" style="background-image: linear-gradient(rgba(4,6,20,0.25), rgba(4,6,20,0.6)), url('/nyitokep.png'); background-size: cover; background-position: center center; background-repeat: no-repeat;">
+    <div id="splashScreen" class="splash-screen">
       <div class="splash-card" id="splashCard">
         <h1>Szigligeti DSZA</h1>
         <p>dal- és szöveg asszisztens</p>
@@ -35,8 +35,8 @@
 
         <section class="panel">
           <div class="small-label">Adatbetöltés és lejátszás</div>
-          <button id="loadShowlistBtn" type="button">Műsorrend betöltése (.txt/.docx)</button>
-          <button id="loadLyricsBtn" type="button">Szövegkönyv betöltése (.txt/.docx)</button>
+          <button id="loadShowlistBtn" type="button">Műsorrend betöltése</button>
+          <button id="loadLyricsBtn" type="button">Szövegkönyv betöltése</button>
           <button id="saveProjectBtn" type="button">Projekt mentése</button>
           <button id="openProjectBtn" type="button">Projekt megnyitása</button>
           <button id="openHelpBtn" type="button">Súgó megnyitása</button>
@@ -57,6 +57,20 @@
           <label for="displayProfileSelect">Kijelzőprofil</label>
           <select id="displayProfileSelect"></select>
           <div id="displayProfileHint" class="small-note"></div>
+
+          <label for="displayBackgroundModeSelect">Display2 háttér</label>
+          <select id="displayBackgroundModeSelect">
+            <option value="logo">Szigligeti logó fekete alapon</option>
+            <option value="color">Homogén szín</option>
+            <option value="image">Feltöltött kép</option>
+          </select>
+
+          <div class="background-controls">
+            <select id="displayBackgroundColorSelect" aria-label="Háttérszín"></select>
+            <input id="displayBackgroundCustomColorInput" type="color" value="#000000" aria-label="Egyedi háttérszín" />
+            <button id="loadBackgroundImageBtn" type="button">Háttérkép feltöltése</button>
+          </div>
+          <div id="backgroundImageName" class="small-note">Alapértelmezett Szigligeti háttér</div>
 
           <label for="fontSizeRange">Display2 szövegméret</label>
           <div class="dual-control-inputs">
@@ -98,8 +112,9 @@
           <label class="check-row"><input id="showListDisplayCheckbox" type="checkbox" /> <span>Műsorlista a Display2-n</span></label>
           <label class="check-row"><input id="showBlockRailDisplayCheckbox" type="checkbox" checked /> <span>Szövegblokkok a Display2-n</span></label>
 
-          <input id="showlistInput" type="file" accept=".txt,.docx" hidden />
-          <input id="lyricsInput" type="file" accept=".txt,.docx" hidden />
+          <input id="showlistInput" type="file" accept=".txt,.docx,.pdf,.odt,.pages,.png,.jpg,.jpeg,.webp,.tif,.tiff,text/plain,application/pdf,application/vnd.oasis.opendocument.text,image/*" hidden />
+          <input id="lyricsInput" type="file" accept=".txt,.docx,.pdf,.odt,.pages,.png,.jpg,.jpeg,.webp,.tif,.tiff,text/plain,application/pdf,application/vnd.oasis.opendocument.text,image/*" hidden />
+          <input id="backgroundImageInput" type="file" accept="image/*" hidden />
           <input id="projectInput" type="file" accept=".dsa,.esp,.json,.emleksugo.project.json,application/json" hidden />
 
           <div id="importStatus" class="import-status">
