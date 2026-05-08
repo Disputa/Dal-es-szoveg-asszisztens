@@ -54,6 +54,10 @@
 
           <div class="small-label display-settings-title">Display2 megjelenés</div>
 
+          <label for="displayProfileSelect">Kijelzőprofil</label>
+          <select id="displayProfileSelect"></select>
+          <div id="displayProfileHint" class="small-note"></div>
+
           <label for="fontSizeRange">Display2 szövegméret</label>
           <div class="dual-control-inputs">
             <input id="fontSizeRange" type="range" min="16" max="96" step="1" value="42" />
@@ -92,6 +96,7 @@
 
           <label class="check-row"><input id="showListMainCheckbox" type="checkbox" checked /> <span>Műsorlista a főfelületen</span></label>
           <label class="check-row"><input id="showListDisplayCheckbox" type="checkbox" /> <span>Műsorlista a Display2-n</span></label>
+          <label class="check-row"><input id="showBlockRailDisplayCheckbox" type="checkbox" checked /> <span>Szövegblokkok a Display2-n</span></label>
 
           <input id="showlistInput" type="file" accept=".txt,.docx" hidden />
           <input id="lyricsInput" type="file" accept=".txt,.docx" hidden />

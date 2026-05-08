@@ -20,20 +20,25 @@ import {
   APP_SHORT_NAME,
 } from "./core/appInfo.js";
 import { buildDisplayPayload } from "./core/displayPayload.js";
+import {
+  DEFAULT_DISPLAY_PROFILE_ID,
+  DISPLAY_PROFILE_CLASS_NAMES,
+  getDisplayProfile,
+  getDisplayProfileList,
+  resolveDisplayProfileId,
+} from "./core/displayProfiles.js";
+import { buildDisplayRenderModel } from "./core/displayRenderRules.js";
 import { createProject, normalizeProject } from "./core/projectModel.js";
 
 const DISPLAY_LABEL = "szigligeti-dsza-display";
+const DEFAULT_DISPLAY_PROFILE = getDisplayProfile(DEFAULT_DISPLAY_PROFILE_ID);
 
 const DEFAULT_TEXT_STYLE = {
-  fontSize: 42,
-  offsetX: 0,
-  offsetY: 0,
+  ...DEFAULT_DISPLAY_PROFILE.textStyle,
 };
 
 const DEFAULT_ROLE_STYLE = {
-  fontSize: 52,
-  offsetX: 0,
-  offsetY: 0,
+  ...DEFAULT_DISPLAY_PROFILE.roleStyle,
 };
 
 const DEFAULT_DISPLAY_SIZE = {
@@ -52,7 +57,9 @@ const sources = {
 
 const uiPrefs = {
   showListMain: true,
-  showListDisplay: false,
+  showListDisplay: DEFAULT_DISPLAY_PROFILE.defaultShowList,
+  showBlockRailDisplay: DEFAULT_DISPLAY_PROFILE.defaultShowBlockRail,
+  displayProfileId: DEFAULT_DISPLAY_PROFILE_ID,
   openedProjectFileName: "",
   textStyle: { ...DEFAULT_TEXT_STYLE },
   roleStyle: { ...DEFAULT_ROLE_STYLE },
@@ -87,6 +94,8 @@ const els = {
   lyricsInput: document.getElementById("lyricsInput"),
   projectInput: document.getElementById("projectInput"),
   playbackModeSelect: document.getElementById("playbackModeSelect"),
+  displayProfileSelect: document.getElementById("displayProfileSelect"),
+  displayProfileHint: document.getElementById("displayProfileHint"),
   speedRange: document.getElementById("speedRange"),
   speedValue: document.getElementById("speedValue"),
   fontSizeRange: document.getElementById("fontSizeRange"),
@@ -103,6 +112,7 @@ const els = {
   roleOffsetYInput: document.getElementById("roleOffsetYInput"),
   showListMainCheckbox: document.getElementById("showListMainCheckbox"),
   showListDisplayCheckbox: document.getElementById("showListDisplayCheckbox"),
+  showBlockRailDisplayCheckbox: document.getElementById("showBlockRailDisplayCheckbox"),
   importStatus: document.getElementById("importStatus"),
   monitorSelect: document.getElementById("monitorSelect"),
   openDisplayBtn: document.getElementById("openDisplayBtn"),
@@ -207,6 +217,33 @@ async function updateRoleStyleAndSync(key, value) {
   await syncDisplay();
 }
 
+function getCurrentDisplayProfile() {
+  return getDisplayProfile(uiPrefs.displayProfileId);
+}
+
+function renderDisplayProfileOptions() {
+  if (!els.displayProfileSelect) return;
+  els.displayProfileSelect.innerHTML = getDisplayProfileList()
+    .map((profile) => `<option value="${profile.id}">${escapeHtml(profile.label)}</option>`)
+    .join("");
+}
+
+async function setDisplayProfile(profileId, { applyDefaults = true } = {}) {
+  const profile = getDisplayProfile(profileId);
+  uiPrefs.displayProfileId = profile.id;
+  if (applyDefaults) {
+    uiPrefs.textStyle = { ...profile.textStyle };
+    uiPrefs.roleStyle = { ...profile.roleStyle };
+    uiPrefs.showListDisplay = !!profile.defaultShowList;
+    uiPrefs.showBlockRailDisplay = !!profile.defaultShowBlockRail;
+  }
+  syncControlValuesFromState();
+  updateImportStatus();
+  renderPreview();
+  await syncDisplay();
+  await flashOverlay(profile.shortLabel || profile.label);
+}
+
 
 init().catch(console.error);
 
@@ -222,6 +259,7 @@ async function init() {
     }
   }
   setupSplash();
+  renderDisplayProfileOptions();
   bindUi();
   await bindDisplaySelectionListener();
   await loadMonitors();
@@ -331,6 +369,10 @@ function bindUi() {
     await flashOverlay(getPlaybackModeLabel(project.playbackMode));
   });
 
+  els.displayProfileSelect?.addEventListener("change", async (e) => {
+    await setDisplayProfile(e.target.value);
+  });
+
   els.speedRange?.addEventListener("input", async (e) => {
     state.speed = clampNumber(e.target.value, 100, 0, 200);
     syncControlValuesFromState();
@@ -358,7 +400,16 @@ function bindUi() {
   });
 
   els.showListDisplayCheckbox?.addEventListener("change", async () => {
+    if (!getCurrentDisplayProfile().allowShowList) {
+      syncControlValuesFromState();
+      return;
+    }
     uiPrefs.showListDisplay = !!els.showListDisplayCheckbox.checked;
+    await syncDisplay();
+  });
+
+  els.showBlockRailDisplayCheckbox?.addEventListener("change", async () => {
+    uiPrefs.showBlockRailDisplay = !!els.showBlockRailDisplayCheckbox.checked;
     await syncDisplay();
   });
 
@@ -635,7 +686,10 @@ async function selectDisplayBlock(idx) {
 function syncControlValuesFromState() {
   const textStyle = getTextStyle();
   const roleStyle = getRoleStyle();
+  const displayProfile = getCurrentDisplayProfile();
   if (els.playbackModeSelect) els.playbackModeSelect.value = project.playbackMode;
+  if (els.displayProfileSelect) els.displayProfileSelect.value = displayProfile.id;
+  if (els.displayProfileHint) els.displayProfileHint.textContent = displayProfile.description || "";
   if (els.speedRange) els.speedRange.value = String(state.speed);
   if (els.speedValue) els.speedValue.textContent = `${state.speed}%`;
   if (els.fontSizeRange) els.fontSizeRange.value = String(textStyle.fontSize);
@@ -651,7 +705,13 @@ function syncControlValuesFromState() {
   if (els.roleOffsetYRange) els.roleOffsetYRange.value = String(roleStyle.offsetY);
   if (els.roleOffsetYInput) els.roleOffsetYInput.value = String(roleStyle.offsetY);
   if (els.showListMainCheckbox) els.showListMainCheckbox.checked = uiPrefs.showListMain;
-  if (els.showListDisplayCheckbox) els.showListDisplayCheckbox.checked = uiPrefs.showListDisplay;
+  if (els.showListDisplayCheckbox) {
+    els.showListDisplayCheckbox.checked = uiPrefs.showListDisplay;
+    els.showListDisplayCheckbox.disabled = !displayProfile.allowShowList;
+  }
+  if (els.showBlockRailDisplayCheckbox) {
+    els.showBlockRailDisplayCheckbox.checked = uiPrefs.showBlockRailDisplay;
+  }
 }
 
 function renderAll() {
@@ -1059,22 +1119,18 @@ function postPreviewOverlay(text) {
 function renderMiniPreview(payload) {
   if (!els.displayPreview || !payload) return;
   updateMiniPreviewScale();
+  const renderModel = buildDisplayRenderModel(payload);
+  applyMiniDisplayProfileClass(renderModel.className);
   const previousBlockIndex = miniPreviewRuntime.blockIndex || 1;
 
   const {
-    songTitle,
     role,
-    text,
-    fullText,
     mode,
     black,
     speed,
     isPlaying,
     blocks,
     blockIndex,
-    showListTitles,
-    currentItemIndex,
-    showListVisible,
     textStyle,
     roleStyle,
     displaySize,
@@ -1088,17 +1144,23 @@ function renderMiniPreview(payload) {
   miniPreviewRuntime.isPlaying = !!isPlaying;
   miniPreviewRuntime.mode = mode || "blocks";
   miniPreviewRuntime.speed = Number(speed) || 100;
-  miniPreviewRuntime.blocks = Array.isArray(blocks) ? blocks : [];
+  miniPreviewRuntime.blocks = renderModel.blocks;
   miniPreviewRuntime.activeRole = role || "";
   miniPreviewRuntime.blockIndex = Number(blockIndex) || 1;
 
   els.displayPreview.classList.toggle("is-black", !!black);
-  if (els.miniSongTitle) els.miniSongTitle.textContent = songTitle || "";
-  if (els.miniRole) els.miniRole.textContent = role || "";
-  renderMiniShowList(showListTitles || [], currentItemIndex || 0, !!showListVisible);
-  renderMiniBlockRail(miniPreviewRuntime.blocks, (Number(blockIndex) || 1) - 1);
-  els.miniContentWrap?.classList.toggle("has-show-list", !!showListVisible);
-  els.miniContentWrap?.classList.toggle("has-block-rail", miniPreviewRuntime.blocks.length > 1);
+  if (els.miniSongTitle) {
+    els.miniSongTitle.textContent = renderModel.showSongTitle ? renderModel.songTitle : "";
+    els.miniSongTitle.style.display = renderModel.showSongTitle ? "" : "none";
+  }
+  if (els.miniRole) {
+    els.miniRole.textContent = renderModel.showRole ? renderModel.role : "";
+    els.miniRole.style.display = renderModel.showRole ? "" : "none";
+  }
+  renderMiniShowList(renderModel.showListTitles, renderModel.currentItemIndex, renderModel.showListVisible);
+  renderMiniBlockRail(miniPreviewRuntime.blocks, renderModel.activeIndex, renderModel.showBlockRail);
+  els.miniContentWrap?.classList.toggle("has-show-list", renderModel.showListVisible);
+  els.miniContentWrap?.classList.toggle("has-block-rail", renderModel.showBlockRail);
   applyMiniTextStyle(textStyle);
   applyMiniRoleStyle(roleStyle);
   clearMiniPreviewScroll();
@@ -1109,21 +1171,18 @@ function renderMiniPreview(payload) {
   }
 
   if (miniPreviewRuntime.mode === "blocks") {
-    miniPreviewRuntime.contentKey = `block:${songTitle || ""}:${role || ""}:${text || ""}`;
+    miniPreviewRuntime.contentKey = `block:${renderModel.profileId}:${renderModel.songTitle}:${renderModel.role}:${renderModel.text}`;
     if (els.miniContent) {
-      els.miniContent.innerHTML = "";
-      els.miniContent.textContent = text || "";
+      els.miniContent.innerHTML = renderModel.blockHtml;
       els.miniContent.style.transform = "translateY(0px)";
     }
     miniPreviewRuntime.scrollPos = 0;
     return;
   }
 
-  const normalizedBlocks = miniPreviewRuntime.blocks.length
-    ? miniPreviewRuntime.blocks.map((block) => ({ role: block.role || "", text: block.text || "" }))
-    : [{ role: role || "", text: fullText || text || "" }];
+  const normalizedBlocks = renderModel.blocks;
 
-  const nextKey = `scroll:${songTitle || ""}:${normalizedBlocks.map((block) => `${block.role}::${block.text}`).join("||")}`;
+  const nextKey = `scroll:${renderModel.profileId}:${renderModel.songTitle}:${normalizedBlocks.map((block) => `${block.role}::${block.text}`).join("||")}`;
   const contentChanged = miniPreviewRuntime.contentKey !== nextKey;
   if (contentChanged) {
     miniPreviewRuntime.scrollPos = miniPreviewRuntime.mode === "scroll-down" ? 999999 : 0;
@@ -1143,6 +1202,12 @@ function renderMiniPreview(payload) {
   }
 }
 
+function applyMiniDisplayProfileClass(className) {
+  if (!els.displayPreview) return;
+  els.displayPreview.classList.remove(...DISPLAY_PROFILE_CLASS_NAMES);
+  if (className) els.displayPreview.classList.add(className);
+}
+
 function renderMiniShowList(titles, activeIndex, visible) {
   if (!els.miniShowList) return;
   els.miniShowList.classList.toggle("visible", !!visible);
@@ -1155,8 +1220,13 @@ function renderMiniShowList(titles, activeIndex, visible) {
     .join("");
 }
 
-function renderMiniBlockRail(blocks, activeIndex) {
+function renderMiniBlockRail(blocks, activeIndex, visible) {
   if (!els.miniBlockRail) return;
+  els.miniBlockRail.style.display = visible ? "" : "none";
+  if (!visible) {
+    els.miniBlockRail.innerHTML = "";
+    return;
+  }
   els.miniBlockRail.innerHTML = `
     <div class="mini-rail-title">BLOKKOK</div>
     ${blocks.map((block, index) => `
@@ -1195,7 +1265,7 @@ function renderMiniScrollBlocks(blocks) {
   els.miniContent.innerHTML = blocks
     .map((block) => `
       <section class="mini-scroll-block" data-role="${escapeAttribute(block.role || "")}">
-        <div>${escapeHtml(block.text || "")}</div>
+        <div>${block.html || escapeHtml(block.text || "")}</div>
       </section>
     `)
     .join('<div class="mini-separator"></div>');
@@ -1658,15 +1728,22 @@ function loadProjectFromObject(data) {
   sources.lyricSongs = Array.isArray(data.sources?.lyricSongs) ? data.sources.lyricSongs : [];
   sources.showlistFileName = data.sources?.showlistFileName || "";
   sources.lyricsFileName = data.sources?.lyricsFileName || "";
+  const loadedProfile = getDisplayProfile(data.uiPrefs?.displayProfileId);
+  uiPrefs.displayProfileId = loadedProfile.id;
   uiPrefs.showListMain = typeof data.uiPrefs?.showListMain === "boolean" ? data.uiPrefs.showListMain : true;
-  uiPrefs.showListDisplay = typeof data.uiPrefs?.showListDisplay === "boolean" ? data.uiPrefs.showListDisplay : false;
+  uiPrefs.showListDisplay = typeof data.uiPrefs?.showListDisplay === "boolean"
+    ? data.uiPrefs.showListDisplay
+    : !!loadedProfile.defaultShowList;
+  uiPrefs.showBlockRailDisplay = typeof data.uiPrefs?.showBlockRailDisplay === "boolean"
+    ? data.uiPrefs.showBlockRailDisplay
+    : !!loadedProfile.defaultShowBlockRail;
   uiPrefs.openedProjectFileName = data.uiPrefs?.openedProjectFileName || "";
   uiPrefs.textStyle = {
-    ...DEFAULT_TEXT_STYLE,
+    ...loadedProfile.textStyle,
     ...(data.uiPrefs?.textStyle || {}),
   };
   uiPrefs.roleStyle = {
-    ...DEFAULT_ROLE_STYLE,
+    ...loadedProfile.roleStyle,
     ...(data.uiPrefs?.roleStyle || {}),
   };
   state.speed = clampNumber(data.uiState?.speed, 100, 0, 200);

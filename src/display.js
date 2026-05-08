@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import "./display.css";
 import splashImage from "./nyitokep.png";
+import { DISPLAY_PROFILE_CLASS_NAMES } from "./core/displayProfiles.js";
+import { buildDisplayRenderModel, escapeHtml } from "./core/displayRenderRules.js";
 
 const isPreview = new URLSearchParams(window.location.search).get("preview") === "1";
 
@@ -48,6 +50,7 @@ const runtime = {
     offsetX: 0,
     offsetY: 0,
   },
+  renderModel: null,
 };
 
 function clearScrollAnimation() {
@@ -90,9 +93,9 @@ function renderShowList(titles = [], currentIndex = 0, visible = false) {
   });
 }
 
-function renderBlockRail(blocks = [], activeIndex = 0) {
+function renderBlockRail(blocks = [], activeIndex = 0, visible = true) {
   if (!els.blockRail) return;
-  const hasBlocks = Array.isArray(blocks) && blocks.length > 1;
+  const hasBlocks = visible && Array.isArray(blocks) && blocks.length > 1;
   els.blockRail.style.display = hasBlocks ? "block" : "none";
   els.contentWrap.classList.toggle("has-block-rail", hasBlocks);
   if (!hasBlocks) {
@@ -180,7 +183,7 @@ function renderScrollBlocks(blocks) {
   els.content.innerHTML = blocks
     .map((block, index) => `
       <section class="scroll-block" data-index="${index}">
-        <div class="scroll-text">${escapeHtml(block.text || "")}</div>
+        <div class="scroll-text">${block.html || escapeHtml(block.text || "")}</div>
       </section>
     `)
     .join('<div class="separator"></div>');
@@ -232,11 +235,16 @@ function startScroll(direction = "up") {
   runtime.frameId = requestAnimationFrame(tick);
 }
 
-function renderTransportHud() {
+function renderTransportHud(visible = true) {
   const playText = runtime.isPlaying ? "⏸ PILLANAT ÁLLJ" : "▶ LEJÁTSZÁS";
   const speedText = `${runtime.speed}%`;
 
   if (!els.transportHud) return;
+  els.transportHud.style.display = visible ? "flex" : "none";
+  if (!visible) {
+    els.transportHud.innerHTML = "";
+    return;
+  }
 
   els.transportHud.innerHTML = `
     <button class="hud-btn" data-action="start">⏮ Eleje</button>
@@ -276,19 +284,15 @@ async function invokeWindowCommand(command) {
 
 function renderState(payload) {
   const previousBlockIndex = runtime.blockIndex;
+  const renderModel = buildDisplayRenderModel(payload);
   const {
     songTitle,
     role,
     text,
-    fullText,
     mode,
     black,
     speed,
     isPlaying,
-    showListVisible,
-    showListTitles,
-    currentItemIndex,
-    blocks,
     blockIndex,
     blockCount,
     textStyle,
@@ -298,10 +302,11 @@ function renderState(payload) {
   runtime.mode = mode || "blocks";
   runtime.speed = Number(speed) || 100;
   runtime.isPlaying = !!isPlaying;
-  runtime.blocks = Array.isArray(blocks) ? blocks : [];
+  runtime.blocks = renderModel.blocks;
   runtime.blockIndex = Number(blockIndex) || 1;
   runtime.blockCount = Number(blockCount) || Math.max(runtime.blocks.length, 1);
   runtime.activeRole = role || "";
+  runtime.renderModel = renderModel;
   runtime.textStyle = {
     fontSize: Number(textStyle?.fontSize) || 42,
     offsetX: Number(textStyle?.offsetX) || 0,
@@ -313,11 +318,15 @@ function renderState(payload) {
     offsetY: Number(roleStyle?.offsetY) || 0,
   };
 
-  els.songTitle.textContent = songTitle || "";
-  els.role.textContent = runtime.mode === "blocks" ? (role || "") : (runtime.activeRole || "");
-  renderShowList(showListTitles || [], currentItemIndex || 0, !!showListVisible);
-  renderBlockRail(runtime.blocks, runtime.blockIndex - 1);
-  renderTransportHud();
+  applyDisplayProfileClass(renderModel.className);
+  els.songTitle.textContent = renderModel.showSongTitle ? (songTitle || "") : "";
+  els.songTitle.style.display = renderModel.showSongTitle ? "" : "none";
+  els.role.textContent = renderModel.showRole ? (runtime.mode === "blocks" ? (role || "") : (runtime.activeRole || "")) : "";
+  els.role.style.display = renderModel.showRole ? "" : "none";
+  els.app?.classList.toggle("hide-credit", !renderModel.showCredit);
+  renderShowList(renderModel.showListTitles, renderModel.currentItemIndex, renderModel.showListVisible);
+  renderBlockRail(runtime.blocks, renderModel.activeIndex, renderModel.showBlockRail);
+  renderTransportHud(renderModel.showTransportHud);
   applyTextStyle();
   applyRoleStyle();
 
@@ -331,18 +340,16 @@ function renderState(payload) {
   }
 
   if (runtime.mode === "blocks") {
-    runtime.contentKey = `block:${songTitle || ""}:${role || ""}:${text || ""}`;
-    els.content.textContent = text || "";
+    runtime.contentKey = `block:${renderModel.profileId}:${songTitle || ""}:${role || ""}:${text || ""}`;
+    els.content.innerHTML = renderModel.blockHtml;
     runtime.scrollPos = 0;
     updateTransform();
     return;
   }
 
-  const normalizedBlocks = runtime.blocks.length
-    ? runtime.blocks.map((block) => ({ role: block.role || "", text: block.text || "" }))
-    : [{ role: role || "", text: fullText || text || "" }];
+  const normalizedBlocks = renderModel.blocks;
 
-  const nextKey = `scroll:${songTitle || ""}:${normalizedBlocks.map((b) => `${b.role}::${b.text}`).join("||")}`;
+  const nextKey = `scroll:${renderModel.profileId}:${songTitle || ""}:${normalizedBlocks.map((b) => `${b.role}::${b.text}`).join("||")}`;
   const contentChanged = runtime.contentKey !== nextKey;
   if (contentChanged) {
     runtime.scrollPos = runtime.mode === "scroll-down" ? 999999 : 0;
@@ -364,12 +371,10 @@ function renderState(payload) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+function applyDisplayProfileClass(className) {
+  if (!els.app) return;
+  els.app.classList.remove(...DISPLAY_PROFILE_CLASS_NAMES);
+  if (className) els.app.classList.add(className);
 }
 
 if (!isPreview) {
