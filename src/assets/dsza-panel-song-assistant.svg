@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 430" role="img" aria-label="Dal Asszisztens panel háttér">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c3f63"/>
+      <stop offset=".58" stop-color="#0e1726"/>
+      <stop offset="1" stop-color="#040507"/>
+    </linearGradient>
+  </defs>
+  <rect width="700" height="430" fill="url(#g)"/>
+  <g fill="none" stroke="#dbeafe" stroke-width="3" opacity=".24">
+    <path d="M46 132 C180 92 276 158 350 132 C424 106 520 158 654 132"/>
+    <path d="M46 172 C180 132 276 198 350 172 C424 146 520 198 654 172"/>
+    <path d="M46 212 C180 172 276 238 350 212 C424 186 520 238 654 212"/>
+    <path d="M46 252 C180 212 276 278 350 252 C424 226 520 278 654 252"/>
+    <path d="M46 292 C180 252 276 318 350 292 C424 266 520 318 654 292"/>
+  </g>
+  <g fill="#ffd95f" opacity=".86" transform="translate(486 126)">
+    <path d="M0 126 a40 26 -18 1 0 1 0 l0 -166 h16 v142 a40 26 -18 1 1 -16 24z"/>
+  </g>
+  <text x="48" y="352" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" letter-spacing="3" fill="#f8fbff" opacity=".82">DAL ASSZISZTENS</text>
+</svg>

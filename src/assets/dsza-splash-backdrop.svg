@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-label="Szigligeti DSZA kottavonalas háttér">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06090f"/>
+      <stop offset=".48" stop-color="#10233a"/>
+      <stop offset="1" stop-color="#07070b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".46" r=".55">
+      <stop offset="0" stop-color="#5b8fcb" stop-opacity=".34"/>
+      <stop offset=".55" stop-color="#1f4f7d" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <rect width="1600" height="1000" fill="url(#glow)"/>
+  <g opacity=".18" stroke="#ffffff" stroke-width="2">
+    <path d="M120 236 C420 202 596 274 800 236 C1004 198 1180 274 1480 236"/>
+    <path d="M120 288 C420 254 596 326 800 288 C1004 250 1180 326 1480 288"/>
+    <path d="M120 340 C420 306 596 378 800 340 C1004 302 1180 378 1480 340"/>
+    <path d="M120 392 C420 358 596 430 800 392 C1004 354 1180 430 1480 392"/>
+    <path d="M120 444 C420 410 596 482 800 444 C1004 406 1180 482 1480 444"/>
+  </g>
+  <g fill="none" stroke="#f4f7fb" stroke-linecap="round" stroke-linejoin="round" opacity=".72">
+    <path d="M236 730 L236 424 L282 342 L382 252 L402 96 L430 252 L530 342" stroke-width="14"/>
+    <path d="M1070 342 L1170 252 L1198 96 L1226 252 L1326 342 L1372 424 L1372 730" stroke-width="14"/>
+    <path d="M432 432 L710 422 Q800 420 890 422 L1168 432" stroke-width="10"/>
+    <path d="M455 525 L680 513 Q800 506 920 513 L1145 525" stroke-width="10"/>
+    <path d="M505 636 L1095 636" stroke-width="10"/>
+    <path d="M542 636 L542 740 M626 636 L626 740 M710 636 L710 740 M794 636 L794 740 M878 636 L878 740 M962 636 L962 740 M1046 636 L1046 740" stroke-width="9"/>
+  </g>
+  <g opacity=".92">
+    <text x="800" y="830" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="146" font-weight="800" letter-spacing="22" fill="#f3f6f8">DSZA</text>
+    <text x="800" y="896" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="33" letter-spacing="7" fill="#9ec5f2">SZIGLIGETI DAL- ÉS SZÖVEG ASSZISZTENS</text>
+  </g>
+  <g transform="translate(1230 690)" fill="#ffd95f" opacity=".9" filter="url(#soft)">
+    <path d="M0 0 a44 30 -18 1 0 1 0 l0 -210 h18 v180 a44 30 -18 1 1 -18 30z"/>
+  </g>
+  <g transform="translate(1218 676)" fill="#ffd95f">
+    <path d="M0 0 a44 30 -18 1 0 1 0 l0 -210 h18 v180 a44 30 -18 1 1 -18 30z"/>
+  </g>
+</svg>

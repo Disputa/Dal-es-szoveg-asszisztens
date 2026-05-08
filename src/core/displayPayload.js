@@ -1,5 +1,5 @@
 import { APP_NAME, APP_RELEASE_LABEL, APP_SHORT_NAME } from "./appInfo.js";
-import { normalizeDisplayBackground } from "./displayBackgrounds.js";
+import { normalizeDisplayBackground, normalizeDisplayColors } from "./displayBackgrounds.js";
 import { getDisplayProfile } from "./displayProfiles.js";
 
 export function buildDisplayPayload({
@@ -42,5 +42,6 @@ export function buildDisplayPayload({
     roleStyle,
     displaySize,
     displayBackground: normalizeDisplayBackground(uiPrefs.displayBackground),
+    displayColors: normalizeDisplayColors(uiPrefs.displayColors),
   };
 }

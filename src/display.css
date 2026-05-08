@@ -19,13 +19,15 @@ body {
   inset: 0;
   --display-bg-color: #000;
   --display-bg-image: none;
+  --display-text-color: #fff;
+  --display-role-color: #ffd95f;
   background:
     linear-gradient(rgba(8, 8, 18, 0.28), rgba(0, 0, 0, 0.34)),
     var(--display-bg-image),
     var(--display-bg-color);
   background-size: cover;
   background-position: center;
-  color: #fff;
+  color: var(--display-text-color);
   overflow: hidden;
 }
 
@@ -126,7 +128,7 @@ body {
   text-align: center;
   font-size: 52px;
   font-weight: 900;
-  color: #ffd95f;
+  color: var(--display-role-color);
   opacity: 0.95;
   line-height: 1.05;
   text-shadow: 0 2px 18px rgba(0,0,0,0.72);
@@ -172,7 +174,7 @@ body {
   margin-bottom: 8px;
   background: rgba(255, 255, 255, 0.055);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #fff;
+  color: var(--display-text-color);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.25;
@@ -228,7 +230,7 @@ body {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
   background: rgba(255,255,255,0.06);
-  color: #fff;
+  color: var(--display-text-color);
   margin-bottom: 8px;
   padding: 8px;
   cursor: pointer;
@@ -269,7 +271,7 @@ body {
 }
 
 .rail-block-body strong {
-  color: #ffd95f;
+  color: var(--display-role-color);
   font-size: 11px;
   margin-bottom: 3px;
   white-space: nowrap;
@@ -281,7 +283,7 @@ body {
   -webkit-box-orient: vertical;
   font-size: 10px;
   line-height: 1.25;
-  color: rgba(255,255,255,0.82);
+  color: var(--display-text-color);
 }
 
 #contentWrap {
@@ -306,6 +308,7 @@ body {
   position: relative;
   white-space: pre-wrap;
   font-size: var(--display-font-size);
+  color: var(--display-text-color);
   line-height: 1.34;
   font-weight: 700;
   text-shadow: 0 2px 18px rgba(0,0,0,0.58);
@@ -365,7 +368,7 @@ body {
 #app.display-profile-audience-subtitle #role,
 #app.display-profile-accessibility #role {
   top: 44%;
-  color: #ffd95f;
+  color: var(--display-role-color);
   max-width: min(980px, 76vw);
 }
 
@@ -382,7 +385,7 @@ body {
 }
 
 #app.display-profile-accessibility #role {
-  color: #fff;
+  color: var(--display-role-color);
   background: #1d4ed8;
   padding: 0.08em 0.35em;
   border-radius: 8px;

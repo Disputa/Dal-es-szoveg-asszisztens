@@ -2,8 +2,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import "./display.css";
-import defaultLogoImage from "./assets/szigligeti-logo-feher.png";
-import { DEFAULT_DISPLAY_BACKGROUND, applyDisplayBackgroundToElement } from "./core/displayBackgrounds.js";
+import defaultLogoImage from "./assets/szigligeti-logo-fekete.png";
+import {
+  DEFAULT_DISPLAY_BACKGROUND,
+  DEFAULT_DISPLAY_COLORS,
+  applyDisplayBackgroundToElement,
+  applyDisplayColorsToElement,
+} from "./core/displayBackgrounds.js";
 import { DISPLAY_PROFILE_CLASS_NAMES } from "./core/displayProfiles.js";
 import { buildDisplayRenderModel, escapeHtml } from "./core/displayRenderRules.js";
 
@@ -26,6 +31,7 @@ const els = {
 
 if (els.app) {
   applyDisplayBackgroundToElement(els.app, DEFAULT_DISPLAY_BACKGROUND, { logoImageUrl: defaultLogoImage });
+  applyDisplayColorsToElement(els.app, DEFAULT_DISPLAY_COLORS);
   els.app.classList.toggle("preview-mode", isPreview);
 }
 
@@ -321,6 +327,7 @@ function renderState(payload) {
 
   applyDisplayProfileClass(renderModel.className);
   applyDisplayBackgroundToElement(els.app, renderModel.displayBackground, { logoImageUrl: defaultLogoImage });
+  applyDisplayColorsToElement(els.app, renderModel.displayColors);
   els.app?.classList.toggle("is-black", !!black);
   els.songTitle.textContent = renderModel.showSongTitle ? (songTitle || "") : "";
   els.songTitle.style.display = renderModel.showSongTitle ? "" : "none";

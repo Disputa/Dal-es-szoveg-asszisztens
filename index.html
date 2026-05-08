@@ -15,7 +15,16 @@
           created by: Deme Gábor © 2026<br />
           Szigligeti pilot program
         </div>
-        <button id="enterAppBtn" type="button">Indítás most</button>
+        <div class="mode-choice-grid">
+          <button class="mode-choice-card" data-app-mode="song-assistant" type="button">
+            <strong>Dal Asszisztens</strong>
+            <span>Koncertsúgó és dalszöveg-kijelzés</span>
+          </button>
+          <button class="mode-choice-card" data-app-mode="show-captioner" type="button">
+            <strong>Előadás feliratozó</strong>
+            <span>Színpadi felirat és akadálymentesítés</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -66,11 +75,30 @@
           </select>
 
           <div class="background-controls">
+            <div id="displayBackgroundPalette" class="color-palette" aria-label="Háttérszín paletta"></div>
             <select id="displayBackgroundColorSelect" aria-label="Háttérszín"></select>
             <input id="displayBackgroundCustomColorInput" type="color" value="#000000" aria-label="Egyedi háttérszín" />
+            <input id="displayBackgroundHexInput" class="hex-color-input" type="text" value="#000000" maxlength="7" aria-label="Háttérszín kód" />
+            <button id="pickBackgroundColorBtn" class="compact-action-btn" type="button">Pipetta</button>
             <button id="loadBackgroundImageBtn" type="button">Háttérkép feltöltése</button>
           </div>
           <div id="backgroundImageName" class="small-note">Alapértelmezett Szigligeti háttér</div>
+
+          <label for="displayTextColorInput">Display2 betűszín</label>
+          <div class="color-controls">
+            <div id="displayTextColorPalette" class="color-palette" aria-label="Betűszín paletta"></div>
+            <input id="displayTextColorInput" type="color" value="#ffffff" aria-label="Betűszín" />
+            <input id="displayTextHexInput" class="hex-color-input" type="text" value="#ffffff" maxlength="7" aria-label="Betűszín kód" />
+            <button id="pickTextColorBtn" class="compact-action-btn" type="button">Pipetta</button>
+          </div>
+
+          <label for="displayRoleColorInput">Megszólaló színe</label>
+          <div class="color-controls">
+            <div id="displayRoleColorPalette" class="color-palette" aria-label="Megszólaló szín paletta"></div>
+            <input id="displayRoleColorInput" type="color" value="#ffd95f" aria-label="Megszólaló színe" />
+            <input id="displayRoleHexInput" class="hex-color-input" type="text" value="#ffd95f" maxlength="7" aria-label="Megszólaló színkód" />
+            <button id="pickRoleColorBtn" class="compact-action-btn" type="button">Pipetta</button>
+          </div>
 
           <label for="fontSizeRange">Display2 szövegméret</label>
           <div class="dual-control-inputs">

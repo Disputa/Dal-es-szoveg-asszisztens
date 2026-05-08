@@ -1,6 +1,9 @@
 
 import "./style.css";
-import defaultLogoImage from "./assets/szigligeti-logo-feher.png";
+import defaultLogoImage from "./assets/szigligeti-logo-fekete.png";
+import splashBackdropImage from "./assets/dsza-splash-backdrop.svg";
+import songPanelImage from "./assets/dsza-panel-song-assistant.svg";
+import captionPanelImage from "./assets/dsza-panel-show-captioner.svg";
 import { invoke } from "@tauri-apps/api/core";
 import {
   availableMonitors,
@@ -19,12 +22,17 @@ import {
   APP_SHORT_NAME,
 } from "./core/appInfo.js";
 import {
+  DEFAULT_DISPLAY_COLORS,
   DEFAULT_DISPLAY_BACKGROUND,
+  applyDisplayColorsToElement,
   applyDisplayBackgroundToElement,
   getDisplayBackgroundColorId,
   getDisplayBackgroundColorOptions,
   getDisplayBackgroundColorValue,
+  getDisplayTextColorOptions,
+  normalizeDisplayColors,
   normalizeDisplayBackground,
+  normalizeHexColor,
 } from "./core/displayBackgrounds.js";
 import { buildDisplayPayload } from "./core/displayPayload.js";
 import {
@@ -46,6 +54,10 @@ import {
 const DISPLAY_LABEL = "szigligeti-dsza-display";
 const DEFAULT_DISPLAY_PROFILE = getDisplayProfile(DEFAULT_DISPLAY_PROFILE_ID);
 const LOGO_BACKGROUND_OPTIONS = { logoImageUrl: defaultLogoImage };
+const APP_MODES = {
+  "song-assistant": "Dal Asszisztens",
+  "show-captioner": "Előadás feliratozó",
+};
 
 const DEFAULT_TEXT_STYLE = {
   ...DEFAULT_DISPLAY_PROFILE.textStyle,
@@ -70,6 +82,7 @@ const sources = {
 };
 
 const uiPrefs = {
+  appMode: "song-assistant",
   showListMain: true,
   showListDisplay: DEFAULT_DISPLAY_PROFILE.defaultShowList,
   showBlockRailDisplay: DEFAULT_DISPLAY_PROFILE.defaultShowBlockRail,
@@ -78,6 +91,7 @@ const uiPrefs = {
   textStyle: { ...DEFAULT_TEXT_STYLE },
   roleStyle: { ...DEFAULT_ROLE_STYLE },
   displayBackground: { ...DEFAULT_DISPLAY_BACKGROUND },
+  displayColors: { ...DEFAULT_DISPLAY_COLORS },
 };
 
 const state = {
@@ -112,8 +126,19 @@ const els = {
   displayProfileSelect: document.getElementById("displayProfileSelect"),
   displayProfileHint: document.getElementById("displayProfileHint"),
   displayBackgroundModeSelect: document.getElementById("displayBackgroundModeSelect"),
+  displayBackgroundPalette: document.getElementById("displayBackgroundPalette"),
   displayBackgroundColorSelect: document.getElementById("displayBackgroundColorSelect"),
   displayBackgroundCustomColorInput: document.getElementById("displayBackgroundCustomColorInput"),
+  displayBackgroundHexInput: document.getElementById("displayBackgroundHexInput"),
+  pickBackgroundColorBtn: document.getElementById("pickBackgroundColorBtn"),
+  displayTextColorPalette: document.getElementById("displayTextColorPalette"),
+  displayTextColorInput: document.getElementById("displayTextColorInput"),
+  displayTextHexInput: document.getElementById("displayTextHexInput"),
+  pickTextColorBtn: document.getElementById("pickTextColorBtn"),
+  displayRoleColorPalette: document.getElementById("displayRoleColorPalette"),
+  displayRoleColorInput: document.getElementById("displayRoleColorInput"),
+  displayRoleHexInput: document.getElementById("displayRoleHexInput"),
+  pickRoleColorBtn: document.getElementById("pickRoleColorBtn"),
   loadBackgroundImageBtn: document.getElementById("loadBackgroundImageBtn"),
   backgroundImageInput: document.getElementById("backgroundImageInput"),
   backgroundImageName: document.getElementById("backgroundImageName"),
@@ -256,6 +281,44 @@ function renderDisplayBackgroundOptions() {
     .join("");
 }
 
+function renderColorPalettes() {
+  renderColorPalette(
+    els.displayBackgroundPalette,
+    getDisplayBackgroundColorOptions().filter((entry) => entry.id !== "custom"),
+    uiPrefs.displayBackground?.color
+  );
+  renderColorPalette(
+    els.displayTextColorPalette,
+    getDisplayTextColorOptions().filter((entry) => entry.id !== "custom"),
+    uiPrefs.displayColors?.text
+  );
+  renderColorPalette(
+    els.displayRoleColorPalette,
+    getDisplayTextColorOptions().filter((entry) => entry.id !== "custom"),
+    uiPrefs.displayColors?.role
+  );
+}
+
+function renderColorPalette(element, colors, activeColor) {
+  if (!element) return;
+  const active = normalizeHexColor(activeColor, "#000000");
+  element.innerHTML = colors
+    .map((entry) => {
+      const value = normalizeHexColor(entry.value, "#000000");
+      return `
+        <button
+          class="color-swatch ${value === active ? "active" : ""}"
+          data-color="${value}"
+          type="button"
+          title="${escapeAttribute(entry.label)}"
+          style="--swatch-color: ${value}"
+          aria-label="${escapeAttribute(entry.label)}"
+        ></button>
+      `;
+    })
+    .join("");
+}
+
 async function setDisplayProfile(profileId, { applyDefaults = true } = {}) {
   const profile = getDisplayProfile(profileId);
   uiPrefs.displayProfileId = profile.id;
@@ -279,6 +342,7 @@ async function init() {
   setupImportAccepts();
   if (els.displayPreview) {
     applyDisplayBackgroundToElement(els.displayPreview, uiPrefs.displayBackground, LOGO_BACKGROUND_OPTIONS);
+    applyDisplayColorsToElement(els.displayPreview, uiPrefs.displayColors);
     updateMiniPreviewScale();
     if ("ResizeObserver" in window) {
       new ResizeObserver(() => {
@@ -290,6 +354,7 @@ async function init() {
   setupSplash();
   renderDisplayProfileOptions();
   renderDisplayBackgroundOptions();
+  renderColorPalettes();
   bindUi();
   await bindDisplaySelectionListener();
   await loadMonitors();
@@ -298,7 +363,7 @@ async function init() {
   updateMainShowListVisibility();
   renderAll();
 
-  if (!els.splashScreen || !els.enterAppBtn) {
+  if (!els.splashScreen || !document.querySelector(".mode-choice-card")) {
     revealMainApp();
     await ensureMainFullscreen();
   }
@@ -308,7 +373,9 @@ function setupSplash() {
   if (!els.splashScreen) return;
 
   els.splashScreen.classList.add("splash-screen-logo");
-  els.splashScreen.style.setProperty("--splash-logo-image", `url("${defaultLogoImage}")`);
+  els.splashScreen.style.setProperty("--splash-backdrop-image", `url("${splashBackdropImage}")`);
+  els.splashScreen.style.setProperty("--song-panel-image", `url("${songPanelImage}")`);
+  els.splashScreen.style.setProperty("--caption-panel-image", `url("${captionPanelImage}")`);
 }
 
 function setupImportAccepts() {
@@ -329,6 +396,17 @@ function bindUi() {
   els.enterAppBtn?.addEventListener("click", async () => {
     revealMainApp();
     await ensureMainFullscreen();
+  });
+
+  document.querySelectorAll(".mode-choice-card").forEach((button) => {
+    button.addEventListener("click", async () => {
+      uiPrefs.appMode = normalizeAppMode(button.dataset.appMode);
+      revealMainApp();
+      syncControlValuesFromState();
+      updateImportStatus();
+      await ensureMainFullscreen();
+      await flashOverlay(getAppModeLabel(uiPrefs.appMode));
+    });
   });
 
   els.loadShowlistBtn?.addEventListener("click", () => pickAndImportText("showlist"));
@@ -428,6 +506,30 @@ function bindUi() {
     syncControlValuesFromState();
     renderPreview();
     await syncDisplay();
+  });
+
+  bindColorPalette(els.displayBackgroundPalette, setDisplayBackgroundColor);
+  bindHexColorInput(els.displayBackgroundHexInput, setDisplayBackgroundColor);
+  els.pickBackgroundColorBtn?.addEventListener("click", async () => {
+    await pickColorWithEyeDropper(setDisplayBackgroundColor, els.displayBackgroundCustomColorInput);
+  });
+
+  bindColorPalette(els.displayTextColorPalette, (color) => setDisplayColor("text", color));
+  els.displayTextColorInput?.addEventListener("input", async (e) => {
+    await setDisplayColor("text", e.target.value);
+  });
+  bindHexColorInput(els.displayTextHexInput, (color) => setDisplayColor("text", color));
+  els.pickTextColorBtn?.addEventListener("click", async () => {
+    await pickColorWithEyeDropper((color) => setDisplayColor("text", color), els.displayTextColorInput);
+  });
+
+  bindColorPalette(els.displayRoleColorPalette, (color) => setDisplayColor("role", color));
+  els.displayRoleColorInput?.addEventListener("input", async (e) => {
+    await setDisplayColor("role", e.target.value);
+  });
+  bindHexColorInput(els.displayRoleHexInput, (color) => setDisplayColor("role", color));
+  els.pickRoleColorBtn?.addEventListener("click", async () => {
+    await pickColorWithEyeDropper((color) => setDisplayColor("role", color), els.displayRoleColorInput);
   });
 
   els.loadBackgroundImageBtn?.addEventListener("click", () => els.backgroundImageInput?.click());
@@ -671,6 +773,67 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function bindColorPalette(element, onSelect) {
+  element?.addEventListener("click", async (e) => {
+    const button = e.target.closest?.(".color-swatch");
+    if (!button?.dataset?.color) return;
+    await onSelect(button.dataset.color);
+  });
+}
+
+function bindHexColorInput(element, onChange) {
+  element?.addEventListener("change", async (e) => {
+    await onChange(e.target.value);
+  });
+  element?.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    await onChange(e.target.value);
+    e.target.blur?.();
+  });
+}
+
+async function setDisplayBackgroundColor(rawColor) {
+  const color = normalizeHexColor(rawColor, uiPrefs.displayBackground?.color || DEFAULT_DISPLAY_BACKGROUND.color);
+  uiPrefs.displayBackground = normalizeDisplayBackground({
+    ...uiPrefs.displayBackground,
+    mode: "color",
+    color,
+  });
+  syncControlValuesFromState();
+  renderPreview();
+  await syncDisplay();
+}
+
+async function setDisplayColor(key, rawColor) {
+  const current = normalizeDisplayColors(uiPrefs.displayColors);
+  const color = normalizeHexColor(rawColor, current[key] || DEFAULT_DISPLAY_COLORS.text);
+  uiPrefs.displayColors = normalizeDisplayColors({
+    ...current,
+    [key]: color,
+  });
+  syncControlValuesFromState();
+  renderPreview();
+  await syncDisplay();
+}
+
+async function pickColorWithEyeDropper(onPicked, fallbackInput) {
+  if ("EyeDropper" in window) {
+    try {
+      const picker = new window.EyeDropper();
+      const result = await picker.open();
+      if (result?.sRGBHex) {
+        await onPicked(result.sRGBHex);
+        return;
+      }
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      console.warn("Pipetta nem érhető el:", err);
+    }
+  }
+  fallbackInput?.click();
+}
+
 function bindTextStyleControl(element, key) {
   element?.addEventListener("input", async (e) => {
     await updateTextStyleAndSync(key, e.target.value);
@@ -820,7 +983,9 @@ function syncControlValuesFromState() {
   const roleStyle = getRoleStyle();
   const displayProfile = getCurrentDisplayProfile();
   const displayBackground = normalizeDisplayBackground(uiPrefs.displayBackground);
+  const displayColors = normalizeDisplayColors(uiPrefs.displayColors);
   uiPrefs.displayBackground = displayBackground;
+  uiPrefs.displayColors = displayColors;
   if (els.playbackModeSelect) els.playbackModeSelect.value = project.playbackMode;
   if (els.displayProfileSelect) els.displayProfileSelect.value = displayProfile.id;
   if (els.displayProfileHint) els.displayProfileHint.textContent = displayProfile.description || "";
@@ -831,6 +996,11 @@ function syncControlValuesFromState() {
   if (els.displayBackgroundCustomColorInput) {
     els.displayBackgroundCustomColorInput.value = displayBackground.color;
   }
+  if (els.displayBackgroundHexInput) els.displayBackgroundHexInput.value = displayBackground.color;
+  if (els.displayTextColorInput) els.displayTextColorInput.value = displayColors.text;
+  if (els.displayTextHexInput) els.displayTextHexInput.value = displayColors.text;
+  if (els.displayRoleColorInput) els.displayRoleColorInput.value = displayColors.role;
+  if (els.displayRoleHexInput) els.displayRoleHexInput.value = displayColors.role;
   if (els.backgroundImageName) {
     els.backgroundImageName.textContent = displayBackground.mode === "image" && displayBackground.imageName
       ? displayBackground.imageName
@@ -860,6 +1030,10 @@ function syncControlValuesFromState() {
   if (els.showBlockRailDisplayCheckbox) {
     els.showBlockRailDisplayCheckbox.checked = uiPrefs.showBlockRailDisplay;
   }
+  document.querySelectorAll(".mode-choice-card").forEach((button) => {
+    button.classList.toggle("active", button.dataset.appMode === uiPrefs.appMode);
+  });
+  renderColorPalettes();
 }
 
 function renderAll() {
@@ -1270,6 +1444,7 @@ function renderMiniPreview(payload) {
   const renderModel = buildDisplayRenderModel(payload);
   applyMiniDisplayProfileClass(renderModel.className);
   applyDisplayBackgroundToElement(els.displayPreview, renderModel.displayBackground, LOGO_BACKGROUND_OPTIONS);
+  applyDisplayColorsToElement(els.displayPreview, renderModel.displayColors);
   const previousBlockIndex = miniPreviewRuntime.blockIndex || 1;
 
   const {
@@ -1775,6 +1950,7 @@ function updateImportStatus(projectName = "") {
     Műsorrend: ${escapeHtml(showText)}<br>
     Szövegkönyv: ${escapeHtml(lyricsText)}<br>
     Projekt: ${escapeHtml(projectText)}<br>
+    Funkció: ${escapeHtml(getAppModeLabel(uiPrefs.appMode))}<br>
     Mód: ${escapeHtml(getPlaybackModeLabel(project.playbackMode))}
   `;
 }
@@ -1783,6 +1959,14 @@ function getPlaybackModeLabel(mode) {
   if (mode === "scroll-up") return "lentről felfelé";
   if (mode === "scroll-down") return "fentről lefelé";
   return "blokkonként";
+}
+
+function normalizeAppMode(mode) {
+  return Object.prototype.hasOwnProperty.call(APP_MODES, mode) ? mode : "song-assistant";
+}
+
+function getAppModeLabel(mode) {
+  return APP_MODES[normalizeAppMode(mode)];
 }
 
 async function saveProjectToFile() {
@@ -1843,6 +2027,7 @@ function loadProjectFromObject(data) {
   sources.showlistFileName = data.sources?.showlistFileName || "";
   sources.lyricsFileName = data.sources?.lyricsFileName || "";
   const loadedProfile = getDisplayProfile(data.uiPrefs?.displayProfileId);
+  uiPrefs.appMode = normalizeAppMode(data.uiPrefs?.appMode);
   uiPrefs.displayProfileId = loadedProfile.id;
   uiPrefs.showListMain = typeof data.uiPrefs?.showListMain === "boolean" ? data.uiPrefs.showListMain : true;
   uiPrefs.showListDisplay = typeof data.uiPrefs?.showListDisplay === "boolean"
@@ -1861,6 +2046,7 @@ function loadProjectFromObject(data) {
     ...(data.uiPrefs?.roleStyle || {}),
   };
   uiPrefs.displayBackground = normalizeDisplayBackground(data.uiPrefs?.displayBackground);
+  uiPrefs.displayColors = normalizeDisplayColors(data.uiPrefs?.displayColors);
   state.speed = clampNumber(data.uiState?.speed, 100, 0, 200);
   state.itemIndex = clampNumber(data.uiState?.itemIndex, 0, 0, Math.max(project.items.length - 1, 0));
   const item = getCurrentItem();

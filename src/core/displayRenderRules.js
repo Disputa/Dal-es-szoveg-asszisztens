@@ -1,4 +1,4 @@
-import { normalizeDisplayBackground } from "./displayBackgrounds.js";
+import { normalizeDisplayBackground, normalizeDisplayColors } from "./displayBackgrounds.js";
 import { getDisplayProfile } from "./displayProfiles.js";
 
 export function buildDisplayRenderModel(payload = {}) {
@@ -36,6 +36,7 @@ export function buildDisplayRenderModel(payload = {}) {
     showListTitles: Array.isArray(payload.showListTitles) ? payload.showListTitles : [],
     currentItemIndex: Number(payload.currentItemIndex) || 0,
     displayBackground: normalizeDisplayBackground(payload.displayBackground),
+    displayColors: normalizeDisplayColors(payload.displayColors),
   };
 }
 
